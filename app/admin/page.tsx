@@ -56,8 +56,14 @@ export default function AdminDashboard() {
   const [admins, setAdmins] = useState<any[]>([]);
   const [selectedPet, setSelectedPet] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [printFilter, setPrintFilter] = useState<'all' | 'ready' | 'pending'>('all');
 
   const [modalConfig, setModalConfig] = useState({ isOpen: false, type: '', id: '', title: '' });
+
+  const [pendingProfileData, setPendingProfileData] = useState<any>(null);
+  const [showOverwriteModal, setShowOverwriteModal] = useState(false);
+  const [isOverwriting, setIsOverwriting] = useState(false);
 
   const refreshData = async () => {
     const { data: petsData } = await supabase.from('pets').select(`*, owners (*)`).order('id', { ascending: false });
@@ -110,65 +116,81 @@ export default function AdminDashboard() {
   };
 
   const handleSaveProfile = async (petId: string, ownerId: string, updates: any) => {
-    let finalPhotoUrl = selectedPet.pet_photo_url;
+    try {
+      let finalPhotoUrl = selectedPet.pet_photo_url;
 
-    if (updates.newPhotoFile) {
-      const compressedFile = await compressImage(updates.newPhotoFile);
-      const fileName = `pet_photo_${petId}_${Math.random()}.jpg`; 
-      
-      const { error: uploadError } = await supabase.storage.from('lucky-pet-assets').upload(fileName, compressedFile, {
-        contentType: 'image/jpeg',
-      });
-      
-      if (!uploadError) {
-        const { data } = supabase.storage.from('lucky-pet-assets').getPublicUrl(fileName);
-        finalPhotoUrl = data.publicUrl;
+      if (updates.newPhotoFile) {
+        const compressedFile = await compressImage(updates.newPhotoFile);
+        const fileName = `pet_photo_${petId}_${Math.random()}.jpg`; 
+        const { error: uploadError } = await supabase.storage.from('lucky-pet-assets').upload(fileName, compressedFile, { contentType: 'image/jpeg' });
+        if (uploadError) throw uploadError;
+        finalPhotoUrl = supabase.storage.from('lucky-pet-assets').getPublicUrl(fileName).data.publicUrl;
       }
+
+      await supabase.from('pets').update({
+        pet_name: updates.pet_name,
+        pet_description: updates.pet_description,
+        allergies: updates.allergies,
+        pet_photo_url: finalPhotoUrl
+      }).eq('id', petId);
+
+      if (ownerId) {
+        await supabase.from('owners').update({
+          full_name: updates.full_name,
+          address: updates.address,
+          phone_number: updates.phone_number,
+          has_whatsapp: updates.has_whatsapp
+        }).eq('id', ownerId);
+      }
+
+      await refreshData();
+      setView('printing');
+    } catch (err: any) {
+      console.error("Error saving profile:", err);
+      alert(`Error saving profile: ${err.message}`);
     }
-
-    await supabase.from('pets').update({
-      pet_name: updates.pet_name,
-      pet_description: updates.pet_description,
-      allergies: updates.allergies,
-      pet_photo_url: finalPhotoUrl
-    }).eq('id', petId);
-
-    if (ownerId) {
-      await supabase.from('owners').update({
-        full_name: updates.full_name,
-        address: updates.address,
-        phone_number: updates.phone_number,
-        has_whatsapp: updates.has_whatsapp
-      }).eq('id', ownerId);
-    }
-
-    await refreshData();
-    setView('printing');
   };
 
-  // --- NUEVO: FUNCIÓN PARA CREAR UN PERFIL DESDE CERO ---
-  const handleCreateProfile = async (data: any) => {
+  const handleCreateProfileCheck = async (data: any) => {
     try {
-      // 1. Check or Create Owner (Usando maybeSingle para no lanzar error si no existe)
-      let ownerId = null;
       const { data: existingOwner, error: checkError } = await supabase
         .from('owners')
-        .select('id')
+        .select('id, full_name')
         .eq('email', data.email)
         .maybeSingle();
 
-      if (checkError) throw new Error("Error checking owner database: " + checkError.message);
+      if (checkError) throw checkError;
 
       if (existingOwner) {
-        ownerId = existingOwner.id;
+        setPendingProfileData({
+          ...data,
+          existingOwnerId: existingOwner.id,
+          existingOwnerName: existingOwner.full_name
+        });
+        setShowOverwriteModal(true);
+        return; 
+      }
+
+      await executeCreateProfile(data, null);
+
+    } catch (err: any) {
+      console.error("Error checking email:", err);
+      alert(`Error checking database: ${err.message}`);
+    }
+  };
+
+  const executeCreateProfile = async (data: any, existingOwnerId: string | null) => {
+    try {
+      let ownerId = existingOwnerId;
+
+      if (ownerId) {
         const { error: updateErr } = await supabase.from('owners').update({
           full_name: data.full_name,
           address: data.address,
           phone_number: data.phone_number,
           has_whatsapp: data.has_whatsapp
         }).eq('id', ownerId);
-        
-        if (updateErr) throw new Error("Error updating existing owner: " + updateErr.message);
+        if (updateErr) throw updateErr;
       } else {
         const { data: newOwner, error: ownerErr } = await supabase.from('owners').insert([{
           email: data.email,
@@ -177,12 +199,10 @@ export default function AdminDashboard() {
           phone_number: data.phone_number,
           has_whatsapp: data.has_whatsapp
         }]).select().single();
-        
-        if (ownerErr) throw new Error("Error creating new owner: " + ownerErr.message);
+        if (ownerErr) throw ownerErr;
         ownerId = newOwner.id;
       }
 
-      // 2. Generate Slug & Create Pet
       const slug = Math.random().toString(36).substring(2, 8);
       const { data: pet, error: petErr } = await supabase.from('pets').insert([{
         owner_id: ownerId,
@@ -192,43 +212,42 @@ export default function AdminDashboard() {
         allergies: data.allergies,
       }]).select().single();
       
-      if (petErr) throw new Error("Error creating pet profile: " + petErr.message);
+      if (petErr) throw petErr;
 
-      // 3. Upload Photo (If any)
       let photoUrl = null;
       if (data.photoFile) {
         const compressedFile = await compressImage(data.photoFile);
         const fileName = `pet_photo_${pet.id}_${Math.random()}.jpg`;
-        const { error: photoErr } = await supabase.storage.from('lucky-pet-assets').upload(fileName, compressedFile, { contentType: 'image/jpeg' });
-        
-        if (photoErr) throw new Error("Error uploading photo: " + photoErr.message);
+        await supabase.storage.from('lucky-pet-assets').upload(fileName, compressedFile, { contentType: 'image/jpeg' });
         photoUrl = supabase.storage.from('lucky-pet-assets').getPublicUrl(fileName).data.publicUrl;
       }
 
-      // 4. Generate & Upload QR Code
       const publicUrl = `https://id.luckypetag.com/${slug}`;
       const qrRes = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(publicUrl)}`);
       const qrBlob = await qrRes.blob();
       const qrName = `Order_QR_${slug}.png`;
-      const { error: qrErr } = await supabase.storage.from('lucky-pet-assets').upload(qrName, qrBlob, { contentType: 'image/png' });
-      
-      if (qrErr) throw new Error("Error uploading QR code: " + qrErr.message);
+      await supabase.storage.from('lucky-pet-assets').upload(qrName, qrBlob, { contentType: 'image/png' });
       const qrUrl = supabase.storage.from('lucky-pet-assets').getPublicUrl(qrName).data.publicUrl;
 
-      // 5. Update pet with URLs
-      const { error: finalUpdateErr } = await supabase.from('pets').update({
+      await supabase.from('pets').update({
         pet_photo_url: photoUrl,
         qr_code_url: qrUrl
       }).eq('id', pet.id);
 
-      if (finalUpdateErr) throw new Error("Error linking URLs to pet: " + finalUpdateErr.message);
-
       await refreshData();
       setView('printing');
     } catch (err: any) {
-      console.error("Profile Creation Error:", err.message || err);
-      alert(`Error: ${err.message || 'An unexpected error occurred while creating the profile.'}`);
+      console.error("Error executing profile creation:", err);
+      alert(`An error occurred: ${err.message}`);
     }
+  };
+
+  const confirmOverwrite = async () => {
+    setIsOverwriting(true);
+    await executeCreateProfile(pendingProfileData, pendingProfileData.existingOwnerId);
+    setIsOverwriting(false);
+    setShowOverwriteModal(false);
+    setPendingProfileData(null);
   };
 
   const handleLogout = async () => {
@@ -242,13 +261,18 @@ export default function AdminDashboard() {
     const emailMatch = (p.owners?.email || '').toLowerCase().includes(term);
     const slugMatch = (p.slug || '').toLowerCase().includes(term);
     const ownerNameMatch = (p.owners?.full_name || '').toLowerCase().includes(term);
-    return nameMatch || emailMatch || slugMatch || ownerNameMatch;
+    const matchesSearch = nameMatch || emailMatch || slugMatch || ownerNameMatch;
+
+    let matchesFilter = true;
+    if (printFilter === 'ready') matchesFilter = p.is_printed === true;
+    if (printFilter === 'pending') matchesFilter = p.is_printed !== true;
+
+    return matchesSearch && matchesFilter;
   });
 
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f2fbf6] text-[#0b6946] font-headline gap-4">
-        {/* Al poner un ícono aquí, forzamos al navegador a descargar la fuente MIENTRAS carga la base de datos */}
         <span className="material-symbols-outlined text-4xl animate-spin">sync</span>
         <p className="font-bold tracking-widest uppercase text-sm">Initializing...</p>
       </div>
@@ -256,7 +280,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f2fbf6] font-body text-[#151d1b] overflow-hidden pb-20 md:pb-0 relative">
+    <div className="min-h-screen flex bg-[#f2fbf6] font-body text-[#151d1b] overflow-hidden relative">
       
       <aside className="hidden md:flex flex-col h-screen p-4 bg-[#151d1b] w-72 shrink-0 border-r-0">
         <div className="px-4 py-8">
@@ -283,25 +307,33 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
         <header className="flex justify-between items-center px-6 md:px-8 py-6 sticky top-0 bg-[#f2fbf6]/90 backdrop-blur-md z-10">
           <h1 className="text-2xl md:text-3xl font-headline font-bold tracking-tight capitalize">{view === 'create' ? 'Create Profile' : view}</h1>
           
           {view === 'printing' && (
-            <div className="hidden md:flex items-center gap-4">
-              <div className="relative w-80">
-                <span className="material-symbols-outlined absolute left-4 top-2.5 text-[#6f7a72] text-xl">search</span>
-                <input 
-                  type="text" 
-                  placeholder="Search by name, email, or slug..." 
-                  className="w-full bg-[#e7f0eb] border-none rounded-full pl-12 pr-6 py-2.5 text-sm focus:ring-2 focus:ring-[#0b6946]/20 transition-all outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="hidden md:flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <div className="relative w-80">
+                  <span className="material-symbols-outlined absolute left-4 top-2.5 text-[#6f7a72] text-xl">search</span>
+                  <input 
+                    type="text" 
+                    placeholder="Search by name, email, or slug..." 
+                    className="w-full bg-[#e7f0eb] border-none rounded-full pl-12 pr-6 py-2.5 text-sm focus:ring-2 focus:ring-[#0b6946]/20 transition-all outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => setView('create')} className="bg-[#0b6946] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md shadow-[#0b6946]/20 hover:bg-[#0a5c3e] transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                  <span className="material-symbols-outlined text-[18px]">add</span> New Profile
+                </button>
               </div>
-              <button onClick={() => setView('create')} className="bg-[#0b6946] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md shadow-[#0b6946]/20 hover:bg-[#0a5c3e] transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                <span className="material-symbols-outlined text-[18px]">add</span> New Profile
-              </button>
+              
+              <div className="flex gap-2 mt-1 pl-2">
+                <FilterTab label="All" active={printFilter === 'all'} onClick={() => setPrintFilter('all')} />
+                <FilterTab label="Pending" active={printFilter === 'pending'} onClick={() => setPrintFilter('pending')} />
+                <FilterTab label="Ready" active={printFilter === 'ready'} onClick={() => setPrintFilter('ready')} />
+              </div>
             </div>
           )}
 
@@ -315,25 +347,33 @@ export default function AdminDashboard() {
             <button onClick={() => setView('create')} className="bg-[#0b6946] text-white w-full py-3 rounded-full font-bold text-sm shadow-md shadow-[#0b6946]/20 hover:bg-[#0a5c3e] transition-all flex items-center justify-center gap-2 cursor-pointer">
               <span className="material-symbols-outlined text-[18px]">add</span> Create New Profile
             </button>
-            <div className="relative w-full shadow-sm">
+            
+            <div className="relative w-full">
               <span className="material-symbols-outlined absolute left-4 top-3 text-[#6f7a72] text-xl">search</span>
               <input 
                 type="text" 
                 placeholder="Search tag..." 
-                className="w-full bg-white border border-[#e7f0eb] rounded-full pl-12 pr-6 py-3 text-sm focus:ring-2 focus:ring-[#0b6946]/20 transition-all outline-none"
+                className="w-full bg-[#e7f0eb] border-none rounded-full pl-12 pr-6 py-3 text-sm focus:ring-2 focus:ring-[#0b6946]/20 transition-all outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <FilterTab label="All" active={printFilter === 'all'} onClick={() => setPrintFilter('all')} />
+                <FilterTab label="Pending" active={printFilter === 'pending'} onClick={() => setPrintFilter('pending')} />
+                <FilterTab label="Ready" active={printFilter === 'ready'} onClick={() => setPrintFilter('ready')} />
+            </div>
           </div>
         )}
 
-        <div className="px-6 md:px-8 pb-12">
+        {/* Añadido un pb-28 en móviles para evitar que el contenido se solape con la navegación inferior */}
+        <div className="px-6 md:px-8 pb-28 md:pb-12">
           {view === 'overview' && <OverviewContent pets={pets} setView={setView} />}
           {view === 'printing' && <PrintingTable pets={filteredPets} onEdit={(p: any) => { setSelectedPet(p); setView('edit'); }} onToggle={togglePrintStatus} onDelete={requestDeletePet} />}
           {view === 'teams' && <TeamsTable admins={admins} />}
           {view === 'edit' && <EditView key={selectedPet?.id} pet={selectedPet} onBack={() => setView('printing')} onDeleteOwner={requestDeleteOwner} onDeletePet={requestDeletePet} onSave={handleSaveProfile} />}
-          {view === 'create' && <CreateView onBack={() => setView('printing')} onSave={handleCreateProfile} />}
+          {view === 'create' && <CreateView onBack={() => setView('printing')} onSave={handleCreateProfileCheck} />}
         </div>
       </main>
 
@@ -352,6 +392,7 @@ export default function AdminDashboard() {
         </button>
       </nav>
 
+      {/* DELETE WARNING MODAL */}
       {modalConfig.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
@@ -374,7 +415,54 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* OVERWRITE WARNING MODAL */}
+      {showOverwriteModal && pendingProfileData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
+          <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
+            <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center text-[#ba1a1a] mb-6 mx-auto">
+              <span className="material-symbols-outlined text-3xl">contact_mail</span>
+            </div>
+            <h2 className="text-xl font-headline font-bold text-center mb-2">Email Already Exists!</h2>
+            <p className="text-[#6f7a72] text-center text-sm mb-8">
+              The email <strong>{pendingProfileData.email}</strong> is already registered to <strong>{pendingProfileData.existingOwnerName || 'another owner'}</strong>.<br/><br/>
+              If you continue, their contact information will be <strong>overwritten</strong> with the new details you just provided. Do you want to proceed?
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => { setShowOverwriteModal(false); setPendingProfileData(null); }} 
+                disabled={isOverwriting}
+                className="flex-1 py-3 rounded-full font-bold text-[#3f4942] bg-[#e1eae5] hover:bg-[#dce5e0] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmOverwrite} 
+                disabled={isOverwriting}
+                className="flex-1 py-3 rounded-full font-bold text-white bg-[#ba1a1a] shadow-lg shadow-[#ba1a1a]/30 hover:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+              >
+                {isOverwriting ? 'Processing...' : 'Yes, Overwrite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+  );
+}
+
+// ==========================================
+// SUBCOMPONENTS
+// ==========================================
+
+function FilterTab({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${active ? 'bg-[#151d1b] text-white shadow-md' : 'bg-transparent text-[#6f7a72] hover:bg-[#e7f0eb]'}`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -432,14 +520,15 @@ function OverviewContent({ pets, setView }: any) {
 
 function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6; 
+  // Reducido a 6 para que la paginación aparezca visible incluso con 8 elementos.
+  const itemsPerPage = 8; 
 
   useEffect(() => {
     setCurrentPage(1);
   }, [pets.length]);
 
   const totalItems = pets.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedPets = pets.slice(startIndex, startIndex + itemsPerPage);
 
@@ -448,9 +537,53 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
     return new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
   };
 
+  const renderPagination = () => {
+    if (totalItems <= itemsPerPage) return null;
+    return (
+      <div className="flex justify-between items-center px-2 py-4 mt-2 border-t border-[#e7f0eb] md:border-none md:bg-[#e7f0eb] md:px-8 md:py-4">
+        <div className="text-xs font-semibold text-[#6f7a72]">
+          Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems}
+        </div>
+        <div className="flex gap-1 sm:gap-2">
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#edf6f1] text-[#151d1b] hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-lg">chevron_left</span>
+          </button>
+          
+          <div className="hidden sm:flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button 
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all text-xs font-bold cursor-pointer ${currentPage === page ? 'bg-[#151d1b] text-white shadow-sm' : 'bg-[#edf6f1] text-[#151d1b] hover:bg-white hover:text-[#0b6946]'}`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#edf6f1] text-[#151d1b] hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-lg">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="md:hidden space-y-4">
+        {paginatedPets.length === 0 && (
+          <div className="text-center py-10 text-[#6f7a72] text-sm font-medium">No results found for your search.</div>
+        )}
+        
         {paginatedPets.map((p: any) => (
           <div key={p.id} className="bg-white p-5 rounded-3xl border border-[#e7f0eb] shadow-sm flex flex-col gap-4">
             <div className="flex justify-between items-start">
@@ -486,17 +619,7 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
           </div>
         ))}
 
-        {totalItems > itemsPerPage && (
-          <div className="flex justify-center pt-4">
-             <button 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-8 py-3 bg-[#e1eae5] text-[#151d1b] font-semibold rounded-full disabled:opacity-50 cursor-pointer"
-             >
-                Load more results
-             </button>
-          </div>
-        )}
+        {renderPagination()}
       </div>
 
       <div className="hidden md:block bg-white rounded-3xl overflow-hidden border border-[#e7f0eb] shadow-sm">
@@ -511,6 +634,12 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
             </tr>
           </thead>
           <tbody className="text-sm divide-y divide-[#edf6f1]">
+            {paginatedPets.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-8 py-10 text-center text-[#6f7a72] font-medium">No results found for your search.</td>
+              </tr>
+            )}
+            
             {paginatedPets.map((p: any) => (
               <tr key={p.id} className="hover:bg-[#f2fbf6] transition-colors group">
                 <td className="px-8 py-5">
@@ -553,38 +682,7 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
           </tbody>
         </table>
         
-        {totalItems > itemsPerPage && (
-          <div className="px-8 py-4 bg-[#e7f0eb] flex justify-between items-center text-xs font-semibold text-[#6f7a72]">
-            <div>Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} Tags</div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-lg">chevron_left</span>
-              </button>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button 
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer ${currentPage === page ? 'bg-white text-[#0b6946] shadow-sm' : 'hover:bg-white hover:text-[#0b6946]'}`}
-                >
-                  {page}
-                </button>
-              ))}
-
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-lg">chevron_right</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {renderPagination()}
       </div>
     </>
   );
@@ -645,9 +743,16 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl border border-[#e7f0eb] space-y-8">
-      <div className="flex justify-between items-center">
+      {/* HEADER REFINADO PARA EDIT */}
+      <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
-          <button type="button" onClick={onBack} className="material-symbols-outlined p-2 hover:bg-[#edf6f1] rounded-full cursor-pointer">arrow_back</button>
+          <button 
+            type="button" 
+            onClick={onBack} 
+            className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
+          >
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
+          </button>
           <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Edit: {pet.pet_name}</h2>
         </div>
         
@@ -740,7 +845,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
           <div className="space-y-4">
             <Input label="Shopify Email" value={pet.owners?.email} disabled />
             <Input name="full_name" label="Owner Name" value={pet.owners?.full_name || ''} />
-            <Input name="address" label="Address" value={pet.owners?.address || ''} />
+            <Input name="address" label="Shipping Address" value={pet.owners?.address || ''} />
             
             <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3">
                <Input name="phone_number" label="Phone Number" value={pet.owners?.phone_number || ''} />
@@ -794,8 +899,15 @@ function CreateView({ onBack, onSave }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl border border-[#e7f0eb] space-y-8">
-      <div className="flex items-center gap-4">
-        <button type="button" onClick={onBack} className="material-symbols-outlined p-2 hover:bg-[#edf6f1] rounded-full cursor-pointer">arrow_back</button>
+      {/* HEADER REFINADO PARA CREATE */}
+      <div className="flex items-center gap-4 mb-2">
+        <button 
+          type="button" 
+          onClick={onBack} 
+          className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
+        >
+          <span className="material-symbols-outlined text-xl">arrow_back</span>
+        </button>
         <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Create New Profile</h2>
       </div>
       
@@ -839,7 +951,7 @@ function CreateView({ onBack, onSave }: any) {
             </div>
             
             <Input name="full_name" label="Owner Name" />
-            <Input name="address" label="Address" />
+            <Input name="address" label="Shipping Address" />
             
             <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3">
                <Input name="phone_number" label="Phone Number" />
