@@ -1,85 +1,134 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { supabase } from '../../../lib/supabase';
+import { supabaseAdmin } from '../../../lib/supabase-admin';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// 🛡️ FUNCIÓN DE SEGURIDAD: Escapa caracteres HTML para evitar Phishing o XSS en el correo
-const sanitizeInput = (str: string) => {
+function sanitizeInput(str: string) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, (tag) => {
-    const charsToReplace: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    };
-    return charsToReplace[tag] || tag;
-  });
-};
+
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { petId, petSlug, message, honeypot } = body;
+    const { petId, message, website } = body as {
+      petId?: string;
+      message?: string;
+      website?: string;
+    };
 
-    // 🚨 1. DEFENSA CONTRA BOTS (Honeypot)
-    if (honeypot && honeypot.length > 0) {
-      console.log('Bot detected and blocked.');
-      return NextResponse.json({ success: true, message: 'Message sent securely.' });
+    // Honeypot: si viene lleno, fingimos éxito y no hacemos nada
+    if (website && website.trim().length > 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'Message sent securely.',
+      });
     }
 
-    if (!petId || !message) {
-      return NextResponse.json({ error: 'Missing required data.' }, { status: 400 });
+    if (!petId || !message?.trim()) {
+      return NextResponse.json(
+        { error: 'Missing required data.' },
+        { status: 400 }
+      );
     }
 
-    // 🚨 2. SANITIZAR EL MENSAJE CONTRA INYECCIONES HTML
-    const safeMessage = sanitizeInput(message);
+    const safeMessage = sanitizeInput(message.trim());
 
-    const { data: pet, error: petError } = await supabase
+    const { data: pet, error: petError } = await supabaseAdmin
       .from('pets')
-      .select('pet_name, owner_id')
+      .select('id, pet_name, owner_id, slug, is_lost_mode_active')
       .eq('id', petId)
-      .single();
+      .maybeSingle();
 
     if (petError || !pet || !pet.owner_id) {
-      return NextResponse.json({ error: 'Failed to locate pet or owner.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Failed to locate pet or owner.' },
+        { status: 404 }
+      );
     }
 
-    const { data: owner, error: ownerError } = await supabase
+    const { data: owner, error: ownerError } = await supabaseAdmin
       .from('owners')
       .select('email, full_name')
       .eq('id', pet.owner_id)
-      .single();
+      .maybeSingle();
 
     if (ownerError || !owner || !owner.email) {
-      return NextResponse.json({ error: 'Owner email not found.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Owner email not found.' },
+        { status: 404 }
+      );
     }
 
-    // 3. Enviar el correo usando la variable safeMessage en lugar de message
+    // Guardar historial del mensaje
+    const { error: insertError } = await supabaseAdmin
+      .from('finder_messages')
+      .insert({
+        pet_id: pet.id,
+        message: safeMessage,
+      });
+
+    if (insertError) {
+      console.error('Failed to save finder message:', insertError.message);
+    }
+
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL || 'alerts@luckypetag.com';
+
+    const subject = pet.is_lost_mode_active
+      ? `🚨 Lost Pet Alert: ${pet.pet_name || 'Your pet'}`
+      : `⚠️ Lucky Pet Tag scan for ${pet.pet_name || 'your pet'}`;
+
     await resend.emails.send({
-      from: 'Lucky Pet Tag Alerts <alerts@luckypetag.com>',
+      from: `Lucky Pet Tag <${fromEmail}>`,
       to: owner.email,
-      subject: `⚠️ ALERTA DE MASCOTA: Alguien ha encontrado a ${pet.pet_name}`,
+      subject,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e7f0eb; border-radius: 24px;">
-          <h1 style="color: #ba1a1a; font-size: 24px; margin-bottom: 5px;">¡URGENTE: ALERTA DE ESCANEO!</h1>
-          <p>Hola ${owner.full_name || 'Dueño/a'},</p>
-          <p>Alguien acaba de escanear la placa Lucky Pet Tag de <strong>${pet.pet_name}</strong> y ha dejado el siguiente mensaje:</p>
-          
-          <div style="background-color: #f2fbf6; padding: 20px; border-radius: 12px; font-weight: normal; margin: 20px 0; border-left: 4px solid #0b6946; white-space: pre-wrap;">
-            "${safeMessage}"
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #151d1b;">
+          <h2 style="margin-bottom: 12px;">Lucky Pet Tag Alert</h2>
+
+          <p>Hello ${sanitizeInput(owner.full_name || 'there')},</p>
+
+          <p>
+            Someone interacted with the public profile for
+            <strong>${sanitizeInput(pet.pet_name || 'your pet')}</strong>.
+          </p>
+
+          <p style="margin: 18px 0 8px;"><strong>Message received:</strong></p>
+          <div style="background: #f6f8f7; border-radius: 12px; padding: 14px 16px;">
+            ${safeMessage}
           </div>
-          
-          <p>Por favor, revisa tu Dashboard o comunícate con la persona utilizando la información del mensaje.</p>
+
+          <p style="margin-top: 18px;">
+            Pet profile slug:
+            <strong>${sanitizeInput(pet.slug || '')}</strong>
+          </p>
+
+          <p style="margin-top: 18px;">
+            Please log in to your Lucky Pet Tag dashboard if you need to update
+            Lost Mode or your contact details.
+          </p>
         </div>
-      `
+      `,
     });
 
-    return NextResponse.json({ success: true, message: 'Message sent securely.' });
+    return NextResponse.json({
+      success: true,
+      message: 'Message sent securely.',
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'An internal server error occurred.';
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'An internal server error occurred.' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

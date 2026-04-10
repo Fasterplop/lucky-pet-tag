@@ -155,6 +155,7 @@ export default function AdminDashboard() {
         age: updates.age,
         pet_description: updates.pet_description,
         allergies: updates.allergies,
+        is_lost_mode_active: updates.is_lost_mode_active,
         pet_photo_url: finalPhotoUrl
       }).eq('id', petId);
 
@@ -237,6 +238,7 @@ export default function AdminDashboard() {
         age: data.age,
         pet_description: data.pet_description,
         allergies: data.allergies,
+        is_lost_mode_active: data.is_lost_mode_active,
       }]).select().single();
       
       if (petErr) throw petErr;
@@ -307,9 +309,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f2fbf6] font-body text-[#151d1b] overflow-hidden relative">
+    <div className="min-h-screen flex bg-[#f2fbf6] font-body text-[#151d1b] pb-20 md:pb-0 relative">
       
-      <aside className="hidden md:flex flex-col h-screen p-4 bg-[#151d1b] w-72 shrink-0 border-r-0">
+      <aside className="hidden md:flex flex-col sticky top-0 h-screen overflow-y-auto p-4 bg-[#151d1b] w-72 shrink-0 border-r-0">
         <div className="px-4 py-8">
           <span className="text-2xl font-headline font-black text-[#85d7ab]">Lucky Pet Tag</span>
           <p className="text-[10px] uppercase tracking-widest text-[#85d7ab]/50 font-bold mt-1">Admin Console</p>
@@ -334,7 +336,7 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
+      <main className="flex-1 flex flex-col min-w-0">
         <header className="flex justify-between items-center px-6 md:px-8 py-6 sticky top-0 bg-[#f2fbf6]/90 backdrop-blur-md z-10">
           <h1 className="text-2xl md:text-3xl font-headline font-bold tracking-tight capitalize">{view === 'create' ? 'Create Profile' : view}</h1>
           
@@ -546,7 +548,7 @@ function OverviewContent({ pets, setView }: any) {
 
 function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8; 
+  const itemsPerPage = 7; 
 
   useEffect(() => {
     setCurrentPage(1);
@@ -766,6 +768,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
       phone_number: formData.get('phone_number'),
       has_whatsapp: formData.get('has_whatsapp') === 'on',
       newPhotoFile: photoFile
+      
     });
     
     setSaving(false);
@@ -830,8 +833,13 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
               <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-4">Pet Photo</label>
               <div className="flex items-center gap-4 bg-[#edf6f1] rounded-3xl p-3">
                 {pet.pet_photo_url ? (
-                  <img src={pet.pet_photo_url} alt="Pet" className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
-                ) : (
+  <div className="flex flex-col items-center gap-1">
+    <img src={pet.pet_photo_url} alt="Pet" className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
+    <a href={`${pet.pet_photo_url}?download=`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer">
+       <span className="material-symbols-outlined text-[12px]">download</span> Download
+    </a>
+  </div>
+) : (
                   <div className="w-12 h-12 rounded-full bg-[#dce5e0] flex items-center justify-center text-[#6f7a72]">
                     <span className="material-symbols-outlined">pets</span>
                   </div>
@@ -908,7 +916,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
           <div className="space-y-4">
             <Input label="Shopify Email" value={pet.owners?.email} disabled />
             <Input name="full_name" label="Owner Name" value={pet.owners?.full_name || ''} />
-            <Input name="address" label="Shipping Address" value={pet.owners?.address || ''} />
+            <Input name="address" label="Address (Default: Shipping Address from Shopify)" value={pet.owners?.address || ''} />
             
             <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3">
                <Input name="phone_number" label="Phone Number" value={pet.owners?.phone_number || ''} />
