@@ -131,53 +131,40 @@ Eliminación en cascada de "Dueño" (borra dueño + todas sus mascotas) con Moda
 
 Teams: Lista estática de usuarios en la tabla admin_users.
 
-6. Vista Pública y Sistema de Seguridad (app/[slug]/page.tsx & API)
-
-El perfil público al que apunta el código QR es dinámico e interactivo, centrado en la protección de datos:
-
-Frontend Cliente (Galería / Perfil Público): Crear la vista a la que apuntan los códigos QR (https://id.luckypetag.com/{slug}). Debe leer el slug de la URL, hacer un fetch a Supabase (pets y owners) y renderizar el perfil de la mascota.
-
-Lógica de Botones de Contacto: En el perfil público, renderizar condicionalmente el botón de WhatsApp o Llamada dependiendo del booleano has_whatsapp de la tabla owners.
-
-Seguridad (RLS): Asegurar que las políticas de Supabase permitan lectura pública (SELECT) de los perfiles para que cualquier persona que escanee el QR pueda ver los datos.
-
-Controles de Privacidad Dinámicos:
-
-Safe Mode (is_lost_mode_active: false): Oculta los datos personales del dueño (teléfono, dirección) por privacidad. Muestra un formulario interactivo para contactar al dueño de forma anónima.
-
-Lost Mode (is_lost_mode_active: true): La UI cambia a color rojo de alerta. Libera los datos del dueño y habilita botones de acción rápida ("Llamar", "WhatsApp" y "Abrir en Google Maps").
-
-API de Notificaciones (/api/notify-owner):
-
-Integración con Resend para enviar correos transaccionales inmediatos al dueño cuando alguien encuentra a la mascota.
-
-Protección Anti-Bots (Honeypot): Campo de formulario invisible que bloquea silenciosamente peticiones automatizadas (spam).
-
-Sanitización XSS: El backend escapa caracteres HTML en el mensaje del usuario para prevenir ataques de Phishing o inyecciones de código en el correo del dueño.
-
-## 7. Siguientes Pasos (Pendientes para Desarrollo Futuro)
-
+6. Siguientes Pasos (Pendientes para Desarrollo Futuro)
 Para completar el ecosistema de Lucky Pet Tag y llevarlo a su versión de producción final, se deben desarrollar los siguientes módulos y características:
 
-* **Dashboard del Dueño (Owner Portal - `app.luckypetag.com`):**
-    * Desarrollar el portal privado principal al que acceden los clientes tras iniciar sesión (Email/Contraseña).
-    * **Gestión del Perfil del Dueño:** Crear una interfaz de ajustes donde el usuario pueda actualizar de forma autónoma su información de contacto:
-        * Nombre completo (`full_name`).
-        * Dirección de residencia/envío (`address`).
-        * Número de teléfono principal (`phone_number`).
-        * Preferencia de contacto por WhatsApp (`has_whatsapp`).
-        * Actualización y recuperación de contraseña (flujo de la ruta `update-password`).
-    * **Galería y Edición de Mascotas:** Panel para visualizar todas las placas inteligentes vinculadas a la cuenta del usuario. Por cada mascota, el cliente debe tener control total para editar:
-        * Fotografía de perfil (`pet_photo_url`) integrando el compresor de imágenes (Canvas) antes de subir a Storage.
-        * Nombre de la mascota (`pet_name`).
-        * Tipo de mascota (`pet_type`, ej. Perro, Gato).
-        * Raza (`breed`).
-        * Edad (`age`).
-        * Descripción general / Rasgos de comportamiento (`pet_description`).
-        * Notas médicas de emergencia y alergias (`allergies`).
-    * **Control de Privacidad Dinámico (Interruptor de Emergencia):** Es fundamental implementar el toggle visual que modifique el campo `is_lost_mode_active`. Esto permite al dueño alternar instantáneamente la placa entre el "Modo a Salvo" (datos ocultos) y el "Modo Perdido" (datos expuestos y UI en alerta).
+6.1 Implementación de la Vista Pública y Sistema de Seguridad (app/[slug]/page.tsx)
+Este es el núcleo funcional del producto, centrado en la protección de datos y la respuesta ante emergencias:
 
-* **Seguridad y Políticas RLS (Row Level Security) en Supabase:**
-    * Configurar las políticas de la base de datos para habilitar la **lectura pública** (`SELECT`) exclusiva a los perfiles de la tabla `pets` basándose en el `slug` (para que cualquier persona pueda escanear y ver el perfil sin iniciar sesión).
-    * Restringir estrictamente la edición (`UPDATE`, `INSERT`, `DELETE`) para garantizar que un cliente únicamente pueda modificar su propia fila en la tabla `owners` y las filas de la tabla `pets` vinculadas a su `auth.uid()`.
+Frontend del Perfil Público: Desarrollar la vista dinámica (https://id.luckypetag.com/{slug}) que recupera los datos de la mascota y el dueño mediante el slug único del QR.
 
+Controles de Privacidad Dinámicos (Lógica de Modos):
+
+Safe Mode (is_lost_mode_active: false): Interfaz enfocada en la privacidad. Oculta datos sensibles y muestra un formulario de contacto anónimo.
+
+Lost Mode (is_lost_mode_active: true): Interfaz de alerta (color rojo). Habilita botones de acción directa ("Llamar", "WhatsApp" y "Google Maps").
+
+API de Notificaciones e Integridad: * Configurar el endpoint /api/notify-owner con Resend para alertas inmediatas.
+
+Implementar protección Honeypot y sanitización XSS para prevenir abusos en los formularios de contacto.
+
+6.2 Dashboard del Dueño (Owner Portal - app.luckypetag.com)
+El portal privado donde el cliente tiene control total sobre su cuenta:
+
+Gestión del Perfil: Interfaz para actualizar nombre, dirección, teléfono y la preferencia de contacto por WhatsApp (has_whatsapp).
+
+Galería y Edición de Mascotas: * CRUD de mascotas vinculado al auth.uid().
+
+Integración de compresor de imágenes (Canvas) para optimizar la carga de fotografías de perfil (pet_photo_url).
+
+Gestión de notas médicas, alergias y rasgos de comportamiento.
+
+Interruptor de Emergencia: Implementación del toggle visual que modifica el estado de is_lost_mode_active en tiempo real.
+
+6.3 Seguridad y Políticas RLS (Row Level Security) en Supabase
+Configuración robusta del backend para garantizar la integridad de la información:
+
+Lectura Pública: Habilitar políticas SELECT exclusivas para la tabla pets mediante el slug, permitiendo que cualquier persona vea el perfil tras el escaneo sin necesidad de autenticación.
+
+Restricción de Edición: Configurar políticas estrictas de UPDATE, INSERT y DELETE para que solo el propietario (verificado por su ID de autenticación) pueda modificar sus propios datos y los de sus mascotas.

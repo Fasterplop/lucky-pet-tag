@@ -754,11 +754,13 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
     const formData = new FormData(e.currentTarget);
     await onSave(pet.id, pet.owners?.id, {
       pet_name: formData.get('pet_name'),
+      pet_description: formData.get('pet_description'),
+      allergies: formData.get('allergies'),
+      // AÑADIDO: Captura de las nuevas variables
       pet_type: formData.get('pet_type'),
       breed: formData.get('breed'),
       age: formData.get('age'),
-      pet_description: formData.get('pet_description'),
-      allergies: formData.get('allergies'),
+      is_lost_mode_active: formData.get('is_lost_mode_active') === 'on',
       full_name: formData.get('full_name'),
       address: formData.get('address'),
       phone_number: formData.get('phone_number'),
@@ -771,6 +773,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl border border-[#e7f0eb] space-y-8">
+      {/* HEADER REFINADO PARA EDIT */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
           <button 
@@ -778,7 +781,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             onClick={onBack} 
             className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Edit: {pet.pet_name}</h2>
         </div>
@@ -830,7 +833,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                   <img src={pet.pet_photo_url} alt="Pet" className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-[#dce5e0] flex items-center justify-center text-[#6f7a72]">
-                    <PawPrint className="w-6 h-6" />
+                    <span className="material-symbols-outlined">pets</span>
                   </div>
                 )}
                 <input 
@@ -843,29 +846,55 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             </div>
 
             <Input name="pet_name" label="Pet Name" value={pet.pet_name} />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <Input name="pet_type" label="Type (Dog, Cat...)" value={pet.pet_type} />
-              <Input name="breed" label="Breed" value={pet.breed} />
-            </div>
-            <Input name="age" label="Age (e.g. 3 years)" value={pet.age} />
-
             <Input name="pet_description" label="Short Description" value={pet.pet_description} area />
             <Input name="allergies" label="Allergies / Medical Notes" value={pet.allergies} />
+
+            {/* AÑADIDO: Campos para pet_type, breed y age */}
+            <div className="grid grid-cols-3 gap-3">
+              <Input name="pet_type" label="Type" value={pet.pet_type} />
+              <Input name="breed" label="Breed" value={pet.breed} />
+              <Input name="age" label="Age" value={pet.age} />
+            </div>
+
+            {/* AÑADIDO: Control de Lost Mode y Public Link */}
+            <div className="bg-[#edf6f1] p-5 rounded-3xl border border-[#dce5e0] space-y-4">
+               <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-1">Public Profile Link</label>
+                  <a 
+                    href={`https://id.luckypetag.com/${pet.slug}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-sm font-bold text-[#0b6946] hover:underline flex items-center gap-2 truncate"
+                  >
+                    id.luckypetag.com/{pet.slug}
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  </a>
+               </div>
+
+               <label className="flex items-center gap-3 cursor-pointer w-max">
+                 <input 
+                   type="checkbox" 
+                   name="is_lost_mode_active" 
+                   defaultChecked={pet.is_lost_mode_active} 
+                   className="w-5 h-5 rounded border-[#a8cfb9] text-[#ba1a1a] focus:ring-[#ba1a1a] bg-white cursor-pointer" 
+                 />
+                 <span className="text-[11px] font-black text-[#ba1a1a] uppercase tracking-wider">Activate Lost Mode (Alert)</span>
+               </label>
+            </div>
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-4">Assigned QR Code ({pet.slug})</label>
               <div className="flex items-center gap-4 bg-[#edf6f1] rounded-3xl p-3">
-                <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm shrink-0 flex items-center justify-center">
+                <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm shrink-0">
                   {pet.qr_code_url ? (
                     <img src={pet.qr_code_url} alt="QR" className="w-full h-full object-contain" />
                   ) : (
-                    <QrCode className="w-6 h-6 text-[#6f7a72]" />
+                    <span className="material-symbols-outlined w-full h-full flex items-center justify-center text-[#6f7a72]">qr_code</span>
                   )}
                 </div>
                 {pet.qr_code_url && (
                   <a href={pet.qr_code_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer">
-                    View original file <ExternalLink className="w-3.5 h-3.5" />
+                    View original file <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                   </a>
                 )}
               </div>
