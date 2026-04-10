@@ -3,6 +3,27 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { 
+  Loader2, 
+  LayoutDashboard, 
+  Printer, 
+  Users, 
+  Search, 
+  Plus, 
+  LogOut, 
+  AlertTriangle, 
+  MailWarning, 
+  ChevronLeft, 
+  ChevronRight, 
+  Undo2, 
+  Pencil, 
+  Trash2, 
+  ArrowLeft, 
+  PawPrint, 
+  QrCode, 
+  ExternalLink, 
+  Info 
+} from 'lucide-react';
 
 type View = 'overview' | 'printing' | 'teams' | 'edit' | 'create';
 
@@ -129,6 +150,9 @@ export default function AdminDashboard() {
 
       await supabase.from('pets').update({
         pet_name: updates.pet_name,
+        pet_type: updates.pet_type,
+        breed: updates.breed,
+        age: updates.age,
         pet_description: updates.pet_description,
         allergies: updates.allergies,
         pet_photo_url: finalPhotoUrl
@@ -208,6 +232,9 @@ export default function AdminDashboard() {
         owner_id: ownerId,
         slug: slug,
         pet_name: data.pet_name || 'New Pet',
+        pet_type: data.pet_type,
+        breed: data.breed,
+        age: data.age,
         pet_description: data.pet_description,
         allergies: data.allergies,
       }]).select().single();
@@ -273,7 +300,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f2fbf6] text-[#0b6946] font-headline gap-4">
-        <span className="material-symbols-outlined text-4xl animate-spin">sync</span>
+        <Loader2 className="w-10 h-10 animate-spin" />
         <p className="font-bold tracking-widest uppercase text-sm">Initializing...</p>
       </div>
     );
@@ -289,9 +316,9 @@ export default function AdminDashboard() {
         </div>
         
         <nav className="flex-1 space-y-2">
-          <NavItem icon="dashboard" label="Overview" active={view === 'overview'} onClick={() => setView('overview')} />
-          <NavItem icon="print" label="Printing" active={view === 'printing' || view === 'create'} onClick={() => setView('printing')} />
-          <NavItem icon="group" label="Teams" active={view === 'teams'} onClick={() => setView('teams')} />
+          <NavItem icon={LayoutDashboard} label="Overview" active={view === 'overview'} onClick={() => setView('overview')} />
+          <NavItem icon={Printer} label="Printing" active={view === 'printing' || view === 'create'} onClick={() => setView('printing')} />
+          <NavItem icon={Users} label="Teams" active={view === 'teams'} onClick={() => setView('teams')} />
         </nav>
 
         <div className="p-4 bg-[#0b6946]/10 rounded-xl mb-4">
@@ -315,7 +342,7 @@ export default function AdminDashboard() {
             <div className="hidden md:flex flex-col gap-2">
               <div className="flex items-center gap-4">
                 <div className="relative w-80">
-                  <span className="material-symbols-outlined absolute left-4 top-2.5 text-[#6f7a72] text-xl">search</span>
+                  <Search className="absolute left-4 top-2.5 text-[#6f7a72] w-5 h-5" />
                   <input 
                     type="text" 
                     placeholder="Search by name, email, or slug..." 
@@ -325,7 +352,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <button onClick={() => setView('create')} className="bg-[#0b6946] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md shadow-[#0b6946]/20 hover:bg-[#0a5c3e] transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                  <span className="material-symbols-outlined text-[18px]">add</span> New Profile
+                  <Plus className="w-5 h-5" /> New Profile
                 </button>
               </div>
               
@@ -338,18 +365,18 @@ export default function AdminDashboard() {
           )}
 
           <button onClick={handleLogout} className="w-10 h-10 flex items-center justify-center rounded-full text-[#ba1a1a] hover:bg-[#ba1a1a]/10 transition-colors cursor-pointer ml-auto md:ml-0">
-            <span className="material-symbols-outlined">logout</span>
+            <LogOut className="w-5 h-5" />
           </button>
         </header>
 
         {view === 'printing' && (
           <div className="px-6 mb-6 md:hidden flex flex-col gap-4">
             <button onClick={() => setView('create')} className="bg-[#0b6946] text-white w-full py-3 rounded-full font-bold text-sm shadow-md shadow-[#0b6946]/20 hover:bg-[#0a5c3e] transition-all flex items-center justify-center gap-2 cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">add</span> Create New Profile
+              <Plus className="w-5 h-5" /> Create New Profile
             </button>
             
             <div className="relative w-full">
-              <span className="material-symbols-outlined absolute left-4 top-3 text-[#6f7a72] text-xl">search</span>
+              <Search className="absolute left-4 top-3 text-[#6f7a72] w-5 h-5" />
               <input 
                 type="text" 
                 placeholder="Search tag..." 
@@ -367,7 +394,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Añadido un pb-28 en móviles para evitar que el contenido se solape con la navegación inferior */}
         <div className="px-6 md:px-8 pb-28 md:pb-12">
           {view === 'overview' && <OverviewContent pets={pets} setView={setView} />}
           {view === 'printing' && <PrintingTable pets={filteredPets} onEdit={(p: any) => { setSelectedPet(p); setView('edit'); }} onToggle={togglePrintStatus} onDelete={requestDeletePet} />}
@@ -379,15 +405,15 @@ export default function AdminDashboard() {
 
       <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-[#f2fbf6]/90 backdrop-blur-xl shadow-[0_-20px_40px_rgba(11,105,70,0.06)] rounded-t-3xl border-t border-[#e7f0eb]">
         <button onClick={() => setView('overview')} className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all cursor-pointer ${view === 'overview' ? 'text-[#0b6946]' : 'text-[#6f7a72]'}`}>
-          <span className="material-symbols-outlined">dashboard</span>
+          <LayoutDashboard className="w-6 h-6" />
           <span className="text-[10px] font-semibold mt-1">Overview</span>
         </button>
         <button onClick={() => setView('printing')} className={`flex flex-col items-center justify-center rounded-full px-6 py-2 transition-all cursor-pointer ${view === 'printing' || view === 'create' ? 'bg-[#0b6946] text-white shadow-lg' : 'text-[#6f7a72]'}`}>
-          <span className="material-symbols-outlined">print</span>
+          <Printer className="w-6 h-6" />
           <span className="text-[10px] font-semibold mt-1">Printing</span>
         </button>
         <button onClick={() => setView('teams')} className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all cursor-pointer ${view === 'teams' ? 'text-[#0b6946]' : 'text-[#6f7a72]'}`}>
-          <span className="material-symbols-outlined">group</span>
+          <Users className="w-6 h-6" />
           <span className="text-[10px] font-semibold mt-1">Teams</span>
         </button>
       </nav>
@@ -397,7 +423,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
             <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center text-[#ba1a1a] mb-6 mx-auto">
-              <span className="material-symbols-outlined text-3xl">warning</span>
+              <AlertTriangle className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-headline font-bold text-center mb-2">Confirm Deletion?</h2>
             <p className="text-[#6f7a72] text-center text-sm mb-8">
@@ -420,7 +446,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
             <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center text-[#ba1a1a] mb-6 mx-auto">
-              <span className="material-symbols-outlined text-3xl">contact_mail</span>
+              <MailWarning className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-headline font-bold text-center mb-2">Email Already Exists!</h2>
             <p className="text-[#6f7a72] text-center text-sm mb-8">
@@ -466,10 +492,10 @@ function FilterTab({ label, active, onClick }: { label: string, active: boolean,
   );
 }
 
-function NavItem({ icon, label, active, onClick }: any) {
+function NavItem({ icon: Icon, label, active, onClick }: any) {
   return (
     <button onClick={onClick} className={`flex w-full items-center gap-3 px-4 py-3 rounded-r-full transition-all cursor-pointer ${active ? 'bg-[#f2fbf6] text-[#0b6946] shadow-sm' : 'text-[#85d7ab]/70 hover:text-[#85d7ab] hover:bg-white/5'}`}>
-      <span className="material-symbols-outlined">{icon}</span>
+      <Icon className="w-6 h-6" />
       <span className="font-headline font-semibold">{label}</span>
     </button>
   );
@@ -520,7 +546,6 @@ function OverviewContent({ pets, setView }: any) {
 
 function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
   const [currentPage, setCurrentPage] = useState(1);
-  // Reducido a 6 para que la paginación aparezca visible incluso con 8 elementos.
   const itemsPerPage = 8; 
 
   useEffect(() => {
@@ -550,7 +575,7 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
             disabled={currentPage === 1}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#edf6f1] text-[#151d1b] hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-lg">chevron_left</span>
+            <ChevronLeft className="w-5 h-5" />
           </button>
           
           <div className="hidden sm:flex gap-1">
@@ -570,7 +595,7 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
             disabled={currentPage === totalPages}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#edf6f1] text-[#151d1b] hover:bg-white hover:text-[#0b6946] transition-all disabled:opacity-40 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-lg">chevron_right</span>
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -607,13 +632,13 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => onToggle(p.id, p.is_printed)} className={`w-10 h-10 rounded-full transition-all flex items-center justify-center cursor-pointer ${p.is_printed ? 'text-[#6f7a72] bg-[#edf6f1]' : 'bg-[#0b6946] text-white shadow-md shadow-[#0b6946]/20'}`}>
-                <span className="material-symbols-outlined">{p.is_printed ? 'undo' : 'print'}</span>
+                {p.is_printed ? <Undo2 className="w-5 h-5" /> : <Printer className="w-5 h-5" />}
               </button>
               <button onClick={() => onEdit(p)} className="w-10 h-10 text-[#3f4942] bg-[#edf6f1] hover:bg-[#e1eae5] rounded-full flex items-center justify-center cursor-pointer">
-                <span className="material-symbols-outlined">edit</span>
+                <Pencil className="w-5 h-5" />
               </button>
               <button onClick={() => onDelete(p.id, p.pet_name)} className="w-10 h-10 text-[#ba1a1a] bg-[#ffdad6] hover:bg-[#ba1a1a] hover:text-white rounded-full flex items-center justify-center transition-colors cursor-pointer">
-                <span className="material-symbols-outlined">delete</span>
+                <Trash2 className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -668,13 +693,13 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
                 </td>
                 <td className="px-8 py-5 text-right flex justify-end gap-2 mt-2">
                   <button onClick={() => onToggle(p.id, p.is_printed)} className={`p-2 rounded-full transition-all flex items-center justify-center cursor-pointer ${p.is_printed ? 'text-[#6f7a72] hover:bg-[#edf6f1]' : 'bg-[#0b6946] text-white shadow-md shadow-[#0b6946]/20'}`}>
-                    <span className="material-symbols-outlined">{p.is_printed ? 'undo' : 'print'}</span>
+                    {p.is_printed ? <Undo2 className="w-5 h-5" /> : <Printer className="w-5 h-5" />}
                   </button>
                   <button onClick={() => onEdit(p)} className="p-2 text-[#3f4942] hover:bg-[#edf6f1] rounded-full flex items-center justify-center cursor-pointer">
-                    <span className="material-symbols-outlined">edit</span>
+                    <Pencil className="w-5 h-5" />
                   </button>
                   <button onClick={() => onDelete(p.id, p.pet_name)} className="p-2 text-[#ba1a1a] hover:bg-[#ffdad6] rounded-full flex items-center justify-center transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined">delete</span>
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </td>
               </tr>
@@ -729,6 +754,9 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
     const formData = new FormData(e.currentTarget);
     await onSave(pet.id, pet.owners?.id, {
       pet_name: formData.get('pet_name'),
+      pet_type: formData.get('pet_type'),
+      breed: formData.get('breed'),
+      age: formData.get('age'),
       pet_description: formData.get('pet_description'),
       allergies: formData.get('allergies'),
       full_name: formData.get('full_name'),
@@ -743,7 +771,6 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl border border-[#e7f0eb] space-y-8">
-      {/* HEADER REFINADO PARA EDIT */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
           <button 
@@ -751,7 +778,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             onClick={onBack} 
             className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Edit: {pet.pet_name}</h2>
         </div>
@@ -803,7 +830,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                   <img src={pet.pet_photo_url} alt="Pet" className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-[#dce5e0] flex items-center justify-center text-[#6f7a72]">
-                    <span className="material-symbols-outlined">pets</span>
+                    <PawPrint className="w-6 h-6" />
                   </div>
                 )}
                 <input 
@@ -816,22 +843,29 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             </div>
 
             <Input name="pet_name" label="Pet Name" value={pet.pet_name} />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Input name="pet_type" label="Type (Dog, Cat...)" value={pet.pet_type} />
+              <Input name="breed" label="Breed" value={pet.breed} />
+            </div>
+            <Input name="age" label="Age (e.g. 3 years)" value={pet.age} />
+
             <Input name="pet_description" label="Short Description" value={pet.pet_description} area />
             <Input name="allergies" label="Allergies / Medical Notes" value={pet.allergies} />
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-4">Assigned QR Code ({pet.slug})</label>
               <div className="flex items-center gap-4 bg-[#edf6f1] rounded-3xl p-3">
-                <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm shrink-0">
+                <div className="w-12 h-12 bg-white rounded-xl p-1 shadow-sm shrink-0 flex items-center justify-center">
                   {pet.qr_code_url ? (
                     <img src={pet.qr_code_url} alt="QR" className="w-full h-full object-contain" />
                   ) : (
-                    <span className="material-symbols-outlined w-full h-full flex items-center justify-center text-[#6f7a72]">qr_code</span>
+                    <QrCode className="w-6 h-6 text-[#6f7a72]" />
                   )}
                 </div>
                 {pet.qr_code_url && (
                   <a href={pet.qr_code_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer">
-                    View original file <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                    View original file <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
               </div>
@@ -885,6 +919,9 @@ function CreateView({ onBack, onSave }: any) {
     await onSave({
       email: formData.get('email'),
       pet_name: formData.get('pet_name'),
+      pet_type: formData.get('pet_type'),
+      breed: formData.get('breed'),
+      age: formData.get('age'),
       pet_description: formData.get('pet_description'),
       allergies: formData.get('allergies'),
       full_name: formData.get('full_name'),
@@ -899,14 +936,13 @@ function CreateView({ onBack, onSave }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl border border-[#e7f0eb] space-y-8">
-      {/* HEADER REFINADO PARA CREATE */}
       <div className="flex items-center gap-4 mb-2">
         <button 
           type="button" 
           onClick={onBack} 
           className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
         >
-          <span className="material-symbols-outlined text-xl">arrow_back</span>
+          <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Create New Profile</h2>
       </div>
@@ -919,7 +955,7 @@ function CreateView({ onBack, onSave }: any) {
               <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-4">Pet Photo</label>
               <div className="flex items-center gap-4 bg-[#edf6f1] rounded-3xl p-3">
                 <div className="w-12 h-12 rounded-full bg-[#dce5e0] flex items-center justify-center text-[#6f7a72]">
-                  <span className="material-symbols-outlined">pets</span>
+                  <PawPrint className="w-6 h-6" />
                 </div>
                 <input 
                   type="file" 
@@ -929,13 +965,21 @@ function CreateView({ onBack, onSave }: any) {
                 />
               </div>
             </div>
+            
             <Input name="pet_name" label="Pet Name" />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Input name="pet_type" label="Type (Dog, Cat...)" />
+              <Input name="breed" label="Breed" />
+            </div>
+            <Input name="age" label="Age (e.g. 3 years)" />
+
             <Input name="pet_description" label="Short Description" area />
             <Input name="allergies" label="Allergies / Medical Notes" />
             
             <div className="p-4 bg-[#edf6f1] rounded-2xl">
               <p className="text-xs text-[#426654] font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">info</span>
+                <Info className="w-4 h-4 shrink-0" />
                 A secure QR code and unique URL will be automatically generated upon saving.
               </p>
             </div>
