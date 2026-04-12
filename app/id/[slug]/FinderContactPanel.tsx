@@ -30,7 +30,7 @@ export default function FinderContactPanel({
 
   function openWhatsappLocationFallback() {
     const fallbackText = encodeURIComponent(
-      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon 💛`
+      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon!`
     );
 
     window.open(`https://wa.me/${whatsappPhone}?text=${fallbackText}`, '_blank');
