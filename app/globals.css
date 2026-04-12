@@ -1,12 +1,2 @@
 @import "tailwindcss";
 
-/* --- SOLUCIÓN ANTI-FOUC PARA LOS ÍCONOS --- */
-.material-symbols-outlined {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  line-height: 1;
-  overflow: hidden; /* Evita que la palabra rompa el layout */
-  white-space: nowrap;
-  vertical-align: middle;
-}

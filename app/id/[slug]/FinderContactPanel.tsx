@@ -30,7 +30,7 @@ export default function FinderContactPanel({
 
   function openWhatsappLocationFallback() {
     const fallbackText = encodeURIComponent(
-      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon!`
+      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring ${petName} back home safely. I hope this helps you reunite very soon!`
     );
 
     window.open(`https://wa.me/${whatsappPhone}?text=${fallbackText}`, '_blank');
@@ -58,7 +58,7 @@ export default function FinderContactPanel({
         const appleMapsUrl = `https://maps.apple.com/?ll=${latitude},${longitude}`;
 
         const text = encodeURIComponent(
-          `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon. \n\nGoogle Maps: ${googleMapsUrl}\nApple Maps: ${appleMapsUrl}`
+          `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring ${petName} back home safely. I hope this helps you reunite very soon. \n\nGoogle Maps: ${googleMapsUrl}`
         );
 
         window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
