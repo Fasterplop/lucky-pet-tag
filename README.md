@@ -13,7 +13,7 @@ Base de Datos & Auth: Supabase (PostgreSQL, Storage, Authentication tradicional 
 
 E-commerce: Shopify (Notificaciones vía Webhooks).
 
-Correos Transaccionales: Resend (API para notificaciones seguras). -Para futuro-
+Correos Transaccionales: Resend permanece disponible como integración futura, pero el flujo público activo de rescate es actualmente WhatsApp-first.
 
 Librerías Clave: qrcode (Generación de QR en backend), API nativa de HTML5 Canvas (para compresión de imágenes).
 
@@ -221,14 +221,27 @@ El portal privado donde el cliente tiene control sobre su cuenta y sus mascotas:
   * el flujo público asume WhatsApp como canal principal de contacto
 
 
-7. Próximos Pasos (Hoja de Ruta al Deploy)
-Para llevar la aplicación a producción, se deben completar los siguientes hitos:
--Configuración de Variables de Entorno:
-    -NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.
-    -SUPABASE_SERVICE_ROLE_KEY (Solo para entorno de servidor).
-    -SHOPIFY_WEBHOOK_SECRET: Para la validación HMAC.
-    -RESEND_API_KEY: Para activar el sistema de notificaciones.
-    -NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL: URL base para los códigos QR (ej. https://id.luckypetag.com).
--Hardening de Políticas SQL (RLS): Implementación de las reglas en la consola de Supabase para asegurar que un dueño no pueda ver mascotas de otro y que el público solo vea lo necesario mediante el slug.
--Activación del Sistema de Notificaciones: Descomentar y testear la lógica en app/api/notify-owner/route.ts para que los mensajes del formulario lleguen al email del dueño.
--Optimización de Assets: Verificar que el compresor de imágenes en el cliente (Canvas API) esté activo para reducir costes de almacenamiento en Storage.
+## 7. Próximos Pasos (Hoja de Ruta al Deploy)
+
+Para llevar la aplicación a producción y dejarla más robusta, los siguientes hitos siguen siendo relevantes:
+
+- **Configuración de Variables de Entorno**
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SHOPIFY_WEBHOOK_SECRET`
+  - `NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL=https://luckypetag.com/id`
+  - `RESEND_API_KEY` y `RESEND_FROM_EMAIL` pueden mantenerse para uso futuro, aunque no formen parte del flujo público activo
+
+- **Historial de Rescate / Contactos**
+  - definir si `finder_messages` se usará para registrar contactos de WhatsApp o eventos de ubicación compartida
+
+- **Mejoras de UX**
+  - mejorar feedback del admin dashboard
+  - documentar mejor los flujos de creación de owner + mascota
+  - seguir refinando el copy emocional de la vista pública
+
+- **Documentación**
+  - documentar la ruta pública canónica `/id/{slug}`
+  - documentar las políticas RLS finales de tablas y Storage
+  - documentar las reglas de subida de fotos de mascotas
