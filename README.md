@@ -87,9 +87,13 @@ message: TEXT
 created_at: TIMESTAMPTZ
 
 Storage (Buckets)
-lucky-pet-assets: Almacena imágenes subidas por el admin y QRs generados por el sistema.
+lucky-pet-assets: Almacena imágenes de mascotas y QRs generados por el sistema.
 
-Políticas (RLS): Los administradores loggeados (authenticated) tienen permisos de INSERT y UPDATE.
+Políticas (RLS):
+- Los administradores autenticados tienen control operativo sobre assets del sistema.
+- Los dueños autenticados pueden subir, ver, actualizar y borrar fotos únicamente para mascotas que les pertenecen.
+- Las fotos de mascotas subidas por dueños usan la convención de ruta:
+  `pets/{pet_id}/photo-{timestamp}.jpg`
 
 4. Flujo de Integración: Shopify Webhook (app/api/webhooks/shopify/route.ts)
 Trigger: El webhook se dispara en Shopify con el evento de Pago del pedido (Order payment).
@@ -100,7 +104,9 @@ Procesamiento de Dueño: Extrae email, full_name, address y phone. Si el correo 
 
 Generación de Mascota: Crea un registro en pets vinculado al dueño, con el nombre "New Pet" y genera un slug seguro aleatorio de 6 dígitos.
 
-Generación de QR: Usa la librería qrcode para crear un buffer apuntando a https://luckypetag.com/{slug}. Sube la imagen a Supabase Storage y guarda la URL en el registro de la mascota.
+Generación de QR: Usa la librería qrcode para crear un buffer apuntando a la ruta pública canónica del perfil:
+`https://luckypetag.com/id/{slug}`.
+Luego sube la imagen a Supabase Storage y guarda la URL en el registro de la mascota.
 
 5. Seguridad y RLS (Row Level Security)
 La integridad de los datos se basa en un modelo de "privilegio mínimo" y aislamiento de contextos:
@@ -146,31 +152,73 @@ Eliminación en cascada de "Dueño" (borra dueño + todas sus mascotas) con Moda
 
 Teams: Lista estática de usuarios en la tabla admin_users.
 
-### 6.2 Vista Pública:
+### 6.2 Vista Pública (`app/id/[slug]/page.tsx`)
 El núcleo funcional para la respuesta ante emergencias, ya operativo:
-* **Frontend Dinámico:** Renderizado de la información pública de la mascota recuperada mediante el slug único de 6 caracteres.
+
+* **Ruta Pública Canónica:** El perfil público se sirve desde:
+  `https://luckypetag.com/id/{slug}`
+
+* **Frontend Dinámico:** Renderizado de la información pública de la mascota recuperada mediante el slug único.
+
 * **Controles de Privacidad Dinámicos (Lógica de Modos):**
-  * *Safe Mode* (`is_lost_mode_active: false`): Muestra un distintivo de "Protected" (seguro)  
-  * *Lost Mode* (`is_lost_mode_active: true`): Muestra un distintivo de "I'm Lost" (alerta) 
+  * *Safe Mode* (`is_lost_mode_active: false`): Muestra un distintivo de "Protected" / "Safe Mode".
+  * *Lost Mode* (`is_lost_mode_active: true`): Muestra un distintivo de "I'm Lost" / "Lost Mode".
 
-6.3 Sistema de Alertas (`app/id/[slug]/page.tsx` & `/api/notify-owner`)
+* **Interfaz Pública Emotiva:** El diseño prioriza claridad, calidez y una llamada emocional a ayudar a la mascota a regresar con su familia.
 
-* **API de Notificaciones Segura (`/api/notify-owner`): -  Esta comentado para implementarse a futuro en caso de ser necesario. **
-  * Integración con Resend para el envío de correos transaccionales al dueño.
-  * Sanitización estricta de inputs (XSS protection).
-  * Implementación de protección *Honeypot* (campo `website`) para prevenir spam o bots automatizados.
-  * Registro en base de datos (`finder_messages`) de cada interacción.
+* **Acciones Públicas Actuales (WhatsApp-first):**
+  * **Message my family** → abre WhatsApp con el mensaje:
+    `Hi, I found {petName} 🐾`
+  * **Send my location to my family** → intenta obtener la ubicación del usuario y abre WhatsApp con:
+    - mensaje de rescate
+    - link de Google Maps
+  * Si la ubicación es denegada o no está disponible, igualmente se abre WhatsApp con un mensaje alternativo sin ubicación automática.
+
+### 6.3 Sistema de Contacto Público
+El flujo público actual es **WhatsApp-first**.
+
+* **Canal principal de rescate:** WhatsApp
+* **Acciones soportadas actualmente:**
+  * mensaje directo a la familia
+  * envío de ubicación a la familia
+* **Fallback actual:** Si la ubicación no está disponible, el sistema sigue abriendo WhatsApp con un mensaje alternativo.
+
+* **Nota técnica:**
+  La lógica previa basada en `/api/notify-owner` y Resend quedó comentada para posible uso futuro si cambian los requisitos del producto.
+
+* **finder_messages:**
+  La tabla permanece disponible para evolución futura del historial de contactos o trazabilidad de eventos de rescate.
 
 
 
 ### 6.4 Dashboard del Dueño (Owner Portal - `app/app/page.tsx`)
-El portal privado donde el cliente tiene control total sobre su cuenta y sus placas:
+El portal privado donde el cliente tiene control sobre su cuenta y sus mascotas:
+
 * **Autenticación:** Sistema de login para clientes finales vinculado a Supabase Auth.
-* **Gestión del Perfil:** Interfaz para actualizar nombre, dirección y teléfono.
-* **Galería y Edición de Mascotas:** * CRUD de mascotas vinculado al ID del usuario autenticado.
-  * Integración de compresor de imágenes (Canvas) para actualizar la foto de la mascota.
-  * Gestión de notas médicas, alergias y biografía.
-* **Interruptor de Emergencia:** Implementación del toggle visual que modifica el estado de `is_lost_mode_active` en tiempo real para habilitar la interfaz roja de búsqueda pública.
+
+* **Gestión del Perfil del Dueño:**
+  * actualización de nombre
+  * dirección
+  * teléfono
+  * el teléfono se trata como obligatorio en la UI porque se usa para contacto por WhatsApp y envío de ubicación
+
+* **Pet Gallery / Edición de Mascotas:**
+  * visualización de mascotas vinculadas al dueño autenticado
+  * edición de nombre, tipo, raza, edad, descripción y notas médicas
+  * activación y desactivación de Lost Mode
+  * apertura del perfil público de cada mascota
+
+* **Gestión de Foto de Mascota:**
+  * cambiar foto
+  * eliminar foto
+  * validación de archivo:
+    - solo imágenes
+    - máximo 10 MB
+  * feedback visual mediante mini toast
+
+* **WhatsApp Toggle:**
+  * el checkbox `has_whatsapp` quedó comentado en la interfaz actual
+  * el flujo público asume WhatsApp como canal principal de contacto
 
 
 7. Próximos Pasos (Hoja de Ruta al Deploy)
