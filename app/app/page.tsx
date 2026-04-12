@@ -7,6 +7,7 @@ import {
   Check,
   ExternalLink,
   Heart,
+  ImagePlus,
   Loader2,
   LogOut,
   Pencil,
@@ -14,6 +15,7 @@ import {
   Save,
   Shield,
   ShieldAlert,
+  Trash2,
   UserRound,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -57,6 +59,11 @@ type PetFormState = {
   allergies: string;
 };
 
+type ToastState = {
+  type: 'success' | 'error';
+  message: string;
+} | null;
+
 function makeOwnerForm(owner: Owner): OwnerFormState {
   return {
     full_name: owner.full_name ?? '',
@@ -81,6 +88,17 @@ function joinClassNames(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ');
 }
 
+function getStoragePathFromPublicUrl(url: string | null) {
+  if (!url) return null;
+
+  const marker = '/storage/v1/object/public/lucky-pet-assets/';
+  const index = url.indexOf(marker);
+
+  if (index === -1) return null;
+
+  return decodeURIComponent(url.slice(index + marker.length));
+}
+
 export default function OwnerPortalPage() {
   const router = useRouter();
 
@@ -95,7 +113,14 @@ export default function OwnerPortalPage() {
 
   const [savingOwner, setSavingOwner] = useState(false);
   const [savingPet, setSavingPet] = useState(false);
+  const [uploadingPhotoPetId, setUploadingPhotoPetId] = useState<string | null>(
+    null
+  );
+  const [deletingPhotoPetId, setDeletingPhotoPetId] = useState<string | null>(
+    null
+  );
   const [banner, setBanner] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
   const publicBaseUrl = useMemo(() => {
     return (
@@ -116,6 +141,16 @@ export default function OwnerPortalPage() {
     const timer = setTimeout(() => setBanner(null), 3500);
     return () => clearTimeout(timer);
   }, [banner]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message });
+  }
 
   async function loadPortal() {
     setLoading(true);
@@ -221,14 +256,152 @@ export default function OwnerPortalPage() {
           ? `${pet.pet_name || 'Your pet'} is now in Lost Mode.`
           : `${pet.pet_name || 'Your pet'} is back in Safe Mode.`
       );
+      showToast(
+        'success',
+        nextValue ? 'Lost Mode activated.' : 'Lost Mode deactivated.'
+      );
     } catch (error) {
-      alert(
-        error instanceof Error
-          ? error.message
-          : 'Could not update Lost Mode.'
+      showToast(
+        'error',
+        error instanceof Error ? error.message : 'Could not update Lost Mode.'
       );
     } finally {
       setBusyPetId(null);
+    }
+  }
+
+  async function handlePetPhotoUpload(pet: Pet, file: File) {
+    if (!file) return;
+
+    const maxSizeBytes = 10 * 1024 * 1024;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Only image files are allowed.');
+      return;
+    }
+
+    if (file.size > maxSizeBytes) {
+      showToast('error', 'Image must be 10 MB or smaller.');
+      return;
+    }
+
+    setUploadingPhotoPetId(pet.id);
+
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const filePath = `pets/${pet.id}/photo-${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('lucky-pet-assets')
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('lucky-pet-assets')
+        .getPublicUrl(filePath);
+
+      const newPhotoUrl = publicUrlData.publicUrl;
+
+      const { data, error } = await supabase
+        .from('pets')
+        .update({ pet_photo_url: newPhotoUrl })
+        .eq('id', pet.id)
+        .select(`
+          id,
+          slug,
+          pet_name,
+          pet_type,
+          breed,
+          age,
+          pet_description,
+          allergies,
+          pet_photo_url,
+          is_lost_mode_active
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const oldPath = getStoragePathFromPublicUrl(pet.pet_photo_url);
+      if (oldPath && oldPath !== filePath) {
+        await supabase.storage.from('lucky-pet-assets').remove([oldPath]);
+      }
+
+      setPets((current) =>
+        current.map((item) => (item.id === pet.id ? (data as Pet) : item))
+      );
+
+      setBanner('Pet photo updated successfully.');
+      showToast('success', 'Photo uploaded successfully.');
+    } catch (error) {
+      showToast(
+        'error',
+        error instanceof Error ? error.message : 'Could not upload pet photo.'
+      );
+    } finally {
+      setUploadingPhotoPetId(null);
+    }
+  }
+
+  async function handlePetPhotoDelete(pet: Pet) {
+    setDeletingPhotoPetId(pet.id);
+
+    try {
+      const oldPath = getStoragePathFromPublicUrl(pet.pet_photo_url);
+
+      if (oldPath) {
+        const { error: removeError } = await supabase.storage
+          .from('lucky-pet-assets')
+          .remove([oldPath]);
+
+        if (removeError) {
+          throw new Error(removeError.message);
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('pets')
+        .update({ pet_photo_url: null })
+        .eq('id', pet.id)
+        .select(`
+          id,
+          slug,
+          pet_name,
+          pet_type,
+          breed,
+          age,
+          pet_description,
+          allergies,
+          pet_photo_url,
+          is_lost_mode_active
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setPets((current) =>
+        current.map((item) => (item.id === pet.id ? (data as Pet) : item))
+      );
+
+      setBanner('Pet photo removed.');
+      showToast('success', 'Photo removed successfully.');
+    } catch (error) {
+      showToast(
+        'error',
+        error instanceof Error ? error.message : 'Could not remove pet photo.'
+      );
+    } finally {
+      setDeletingPhotoPetId(null);
     }
   }
 
@@ -272,9 +445,11 @@ export default function OwnerPortalPage() {
       );
 
       setBanner('Your pet profile has been updated.');
+      showToast('success', 'Pet profile updated.');
       cancelEditingPet();
     } catch (error) {
-      alert(
+      showToast(
+        'error',
         error instanceof Error ? error.message : 'Could not save pet changes.'
       );
     } finally {
@@ -295,7 +470,7 @@ export default function OwnerPortalPage() {
           full_name: ownerForm.full_name.trim(),
           phone_number: ownerForm.phone_number.trim(),
           address: ownerForm.address.trim(),
-          has_whatsapp: ownerForm.has_whatsapp,
+          has_whatsapp: true,
         })
         .eq('id', owner.id)
         .select('id, email, full_name, phone_number, address, has_whatsapp')
@@ -309,8 +484,10 @@ export default function OwnerPortalPage() {
       setOwner(updatedOwner);
       setOwnerForm(makeOwnerForm(updatedOwner));
       setBanner('Your profile has been updated.');
+      showToast('success', 'Profile updated successfully.');
     } catch (error) {
-      alert(
+      showToast(
+        'error',
         error instanceof Error
           ? error.message
           : 'Could not save owner settings.'
@@ -430,7 +607,8 @@ export default function OwnerPortalPage() {
             <Heart size={36} className={styles.emptyIcon} />
             <h3 className={styles.emptyTitle}>Your gallery is waiting.</h3>
             <p className={styles.emptyText}>
-              Add your first pet and create a profile that helps them come home safely.
+              Add your first pet and create a profile that helps them come home
+              safely.
             </p>
             <a
               href="https://luckypetag.com/collections/all"
@@ -459,7 +637,9 @@ export default function OwnerPortalPage() {
                         className={styles.petImage}
                       />
                     ) : (
-                      <div className={styles.petImageFallback}>No photo uploaded</div>
+                      <div className={styles.petImageFallback}>
+                        No photo uploaded
+                      </div>
                     )}
 
                     <div
@@ -468,7 +648,11 @@ export default function OwnerPortalPage() {
                         lostMode ? styles.statusLost : styles.statusSafe
                       )}
                     >
-                      {lostMode ? <ShieldAlert size={14} /> : <Shield size={14} />}
+                      {lostMode ? (
+                        <ShieldAlert size={14} />
+                      ) : (
+                        <Shield size={14} />
+                      )}
                       <span>{lostMode ? 'Lost Mode' : 'Safe Mode'}</span>
                     </div>
                   </div>
@@ -535,28 +719,107 @@ export default function OwnerPortalPage() {
 
                     {isEditing && petForm ? (
                       <div className={styles.editorCard}>
+                        <div className={styles.photoEditorCard}>
+                          <div className={styles.photoEditorPreview}>
+                            {pet.pet_photo_url ? (
+                              <img
+                                src={pet.pet_photo_url}
+                                alt={pet.pet_name || 'Pet photo'}
+                                className={styles.photoEditorImage}
+                              />
+                            ) : (
+                              <div className={styles.photoEditorFallback}>
+                                No photo yet
+                              </div>
+                            )}
+                          </div>
+
+                          <div className={styles.photoEditorActions}>
+                            <label className={styles.uploadPhotoButton}>
+                              {uploadingPhotoPetId === pet.id ? (
+                                <>
+                                  <Loader2
+                                    className={styles.spinIcon}
+                                    size={16}
+                                  />
+                                  <span>Uploading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ImagePlus size={16} />
+                                  <span>Change photo</span>
+                                </>
+                              )}
+
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className={styles.hiddenFileInput}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    void handlePetPhotoUpload(pet, file);
+                                  }
+                                  e.currentTarget.value = '';
+                                }}
+                              />
+                            </label>
+
+                            {pet.pet_photo_url ? (
+                              <button
+                                type="button"
+                                className={styles.removePhotoButton}
+                                disabled={deletingPhotoPetId === pet.id}
+                                onClick={() => void handlePetPhotoDelete(pet)}
+                              >
+                                {deletingPhotoPetId === pet.id ? (
+                                  <>
+                                    <Loader2
+                                      className={styles.spinIcon}
+                                      size={16}
+                                    />
+                                    <span>Removing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Trash2 size={16} />
+                                    <span>Remove photo</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+
                         <div className={styles.formGrid}>
                           <InputField
                             label="Pet name"
                             value={petForm.pet_name}
+                            placeholder="e.g. Bella"
                             onChange={(value) =>
                               setPetForm((current) =>
-                                current ? { ...current, pet_name: value } : current
+                                current
+                                  ? { ...current, pet_name: value }
+                                  : current
                               )
                             }
                           />
                           <InputField
                             label="Pet type"
                             value={petForm.pet_type}
+                            placeholder="e.g. Dog"
                             onChange={(value) =>
                               setPetForm((current) =>
-                                current ? { ...current, pet_type: value } : current
+                                current
+                                  ? { ...current, pet_type: value }
+                                  : current
                               )
                             }
                           />
                           <InputField
                             label="Breed"
                             value={petForm.breed}
+                            placeholder="e.g. Golden Retriever"
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current ? { ...current, breed: value } : current
@@ -566,6 +829,7 @@ export default function OwnerPortalPage() {
                           <InputField
                             label="Age"
                             value={petForm.age}
+                            placeholder="e.g. 3 years"
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current ? { ...current, age: value } : current
@@ -578,6 +842,7 @@ export default function OwnerPortalPage() {
                           <TextAreaField
                             label="Description"
                             value={petForm.pet_description}
+                            placeholder="e.g. Friendly, playful, and loves being around people."
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current
@@ -592,9 +857,12 @@ export default function OwnerPortalPage() {
                           <TextAreaField
                             label="Allergies / Medical notes"
                             value={petForm.allergies}
+                            placeholder="e.g. Allergic to chicken. Takes medication every morning."
                             onChange={(value) =>
                               setPetForm((current) =>
-                                current ? { ...current, allergies: value } : current
+                                current
+                                  ? { ...current, allergies: value }
+                                  : current
                               )
                             }
                           />
@@ -640,8 +908,8 @@ export default function OwnerPortalPage() {
             Keep your contact details close to home.
           </h2>
           <p className={styles.sectionText}>
-            Make sure your information is accurate so your pet’s profile can help
-            the right person reach you quickly when needed.
+            Make sure your information is accurate so your pet’s profile can
+            help the right person reach you quickly when needed.
           </p>
         </div>
 
@@ -650,6 +918,7 @@ export default function OwnerPortalPage() {
             <InputField
               label="Full name"
               value={ownerForm?.full_name || ''}
+              placeholder="e.g. Luis Martinez"
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, full_name: value } : current
@@ -658,8 +927,10 @@ export default function OwnerPortalPage() {
             />
 
             <InputField
-              label="Phone number"
+              label="Phone number *"
               value={ownerForm?.phone_number || ''}
+              placeholder="e.g. (123) 456-7890"
+              hint="Used for WhatsApp messages and shared location."
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, phone_number: value } : current
@@ -672,6 +943,7 @@ export default function OwnerPortalPage() {
             <InputField
               label="Address"
               value={ownerForm?.address || ''}
+              placeholder="e.g. 1200 NW 6 Avenue, Miami, FL 33136"
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, address: value } : current
@@ -684,11 +956,13 @@ export default function OwnerPortalPage() {
             <InputField
               label="Email"
               value={owner?.email || ''}
+              placeholder="e.g. name@email.com"
               onChange={() => {}}
               disabled
             />
           </div>
 
+          {/*
           <label className={styles.checkboxCard}>
             <input
               type="checkbox"
@@ -703,6 +977,7 @@ export default function OwnerPortalPage() {
             />
             <span>I use WhatsApp for Lost Mode contact</span>
           </label>
+          */}
 
           <div className={styles.ownerActions}>
             <button
@@ -720,6 +995,19 @@ export default function OwnerPortalPage() {
           </div>
         </form>
       </section>
+
+      {toast ? (
+        <div className={styles.toastViewport}>
+          <div
+            className={joinClassNames(
+              styles.toast,
+              toast.type === 'success' ? styles.toastSuccess : styles.toastError
+            )}
+          >
+            {toast.message}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -744,11 +1032,15 @@ function InputField({
   value,
   onChange,
   disabled = false,
+  placeholder = '',
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  placeholder?: string;
+  hint?: string;
 }) {
   return (
     <label className={styles.field}>
@@ -756,9 +1048,11 @@ function InputField({
       <input
         value={value}
         disabled={disabled}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={styles.input}
       />
+      {hint ? <span className={styles.fieldHint}>{hint}</span> : null}
     </label>
   );
 }
@@ -767,10 +1061,12 @@ function TextAreaField({
   label,
   value,
   onChange,
+  placeholder = '',
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <label className={styles.field}>
@@ -778,6 +1074,7 @@ function TextAreaField({
       <textarea
         rows={4}
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={styles.textarea}
       />

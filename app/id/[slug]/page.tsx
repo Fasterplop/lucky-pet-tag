@@ -9,14 +9,10 @@ import {
   HeartPulse,
   Info,
   LogIn,
-  MapPin,
-  MessageCircle,
   PawPrint,
-  Phone,
   Shield,
   Tag,
 } from 'lucide-react';
-
 import { supabasePublic } from '../../../lib/supabase-public';
 import { supabaseAdmin } from '../../../lib/supabase-admin';
 import FinderContactPanel from './FinderContactPanel';
@@ -119,24 +115,13 @@ export default async function PublicPetProfilePage({
   }
 
   const lostMode = Boolean(pet.is_lost_mode_active);
-  const owner =
-    lostMode && pet.owner_id
-      ? await getOwnerContactById(pet.owner_id)
-      : null;
+  const owner = pet.owner_id ? await getOwnerContactById(pet.owner_id) : null;
 
   const petName = pet.pet_name?.trim() || 'Lucky Pet';
   const tagline =
-    pet.pet_description?.trim() || "I'm friendly, please check my tag.";
-
+    pet.pet_description?.trim() || "I'm friendly, please help me get back home.";
   const phone = digitsOnly(owner?.phone_number);
-  const callHref = phone ? `tel:${phone}` : '#';
-  const whatsappHref =
-    phone && owner?.has_whatsapp ? `https://wa.me/${phone}` : '#';
-  const mapsHref = owner?.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        owner.address
-      )}`
-    : '#';
+  const canShareLocation = Boolean(phone && owner?.has_whatsapp);
 
   const ownerPortalUrl = process.env.NEXT_PUBLIC_OWNER_PORTAL_URL || '/app';
 
@@ -161,82 +146,7 @@ export default async function PublicPetProfilePage({
 
       <section className={styles.shell}>
         <div className={styles.grid}>
-          <aside className={styles.left}>
-            {!lostMode ? (
-              <FinderContactPanel petId={pet.id} petName={petName} />
-            ) : (
-              <div className={styles.actionCard}>
-                <div className={styles.center}>
-                  <div
-                    className={styles.actionIconWrap}
-                    style={{ background: '#fee2e2', color: '#dc2626' }}
-                  >
-                    <AlertTriangle size={28} />
-                  </div>
-
-                  <h2 className={styles.actionTitle}>{petName} may be lost</h2>
-
-                  <p className={styles.actionText}>
-                    Lost Mode is active. Please contact the owner immediately using
-                    one of the direct actions below.
-                  </p>
-
-                  <div className={styles.directGrid}>
-                    <DirectButton
-                      href={callHref}
-                      label="Call"
-                      icon={<Phone size={17} />}
-                      variant="red"
-                      disabled={!phone}
-                    />
-                    <DirectButton
-                      href={whatsappHref}
-                      label="WhatsApp"
-                      icon={<MessageCircle size={17} />}
-                      variant="green"
-                      disabled={!(phone && owner?.has_whatsapp)}
-                      external
-                    />
-                    <DirectButton
-                      href={mapsHref}
-                      label="Google Maps"
-                      icon={<MapPin size={17} />}
-                      variant="dark"
-                      disabled={!owner?.address}
-                      external
-                    />
-                  </div>
-
-                  <div className={styles.ownerInfo}>
-                    <p className={styles.ownerInfoTitle}>Owner contact</p>
-                    <p className={styles.ownerInfoRow}>
-                      <strong>Name:</strong> {owner?.full_name || 'Not available'}
-                    </p>
-                    <p className={styles.ownerInfoRow}>
-                      <strong>Phone:</strong> {owner?.phone_number || 'Not available'}
-                    </p>
-                    <p className={styles.ownerInfoRow}>
-                      <strong>Address:</strong> {owner?.address || 'Not available'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className={styles.trustRow}>
-              <div className={styles.trustItem}>
-                <Shield size={14} />
-                <span>Secure Profile</span>
-              </div>
-
-              <div className={styles.trustItem}>
-                <BellRing size={14} />
-                <span>Instant Alerts</span>
-              </div>
-            </div>
-          </aside>
-
-          <div className={styles.right}>
+          <aside className={styles.profileColumn}>
             <div className={styles.photoWrap}>
               <div className={styles.photoFrame}>
                 {pet.pet_photo_url ? (
@@ -256,7 +166,7 @@ export default async function PublicPetProfilePage({
                 }`}
               >
                 {lostMode ? <AlertTriangle size={14} /> : <BadgeCheck size={14} />}
-                {lostMode ? 'Lost Mode' : 'Protected'}
+                {lostMode ? "I'm lost" : 'Protected'}
               </div>
             </div>
 
@@ -276,11 +186,9 @@ export default async function PublicPetProfilePage({
                   </div>
 
                   <div>
-                    <h2 className={styles.allergyTitle}>
-                      Allergies / Medical Notes
-                    </h2>
+                    <h2 className={styles.allergyTitle}>Allergies / Medical Notes</h2>
                     <p className={styles.allergyText}>
-                      {pet.allergies}
+                      Medical notes: {pet.allergies}
                     </p>
                   </div>
                 </div>
@@ -299,15 +207,36 @@ export default async function PublicPetProfilePage({
                 value={pet.breed || 'Not listed'}
               />
               <FactCard
+                className={styles.desktopOnlyCard}
                 icon={<CalendarDays size={20} />}
                 label="Age"
                 value={pet.age || 'Not listed'}
               />
               <FactCard
+                className={styles.desktopOnlyCard}
                 icon={<Info size={20} />}
                 label="Type"
                 value="Pet Profile"
               />
+            </div>
+          </aside>
+
+          <div className={styles.actionColumn}>
+            <FinderContactPanel
+  petName={petName}
+  whatsappPhone={phone || ''}
+/>
+
+            <div className={styles.trustRow}>
+              <div className={styles.trustItem}>
+                <Shield size={14} />
+                <span>Secure Profile</span>
+              </div>
+
+              <div className={styles.trustItem}>
+                <BellRing size={14} />
+                <span>Fast Family Alerts</span>
+              </div>
             </div>
           </div>
         </div>
@@ -353,7 +282,9 @@ export default async function PublicPetProfilePage({
             Hikevo Design
           </a>
         </p>
-        <p className={styles.footerCopy}>© {new Date().getFullYear()} Lucky Pet Tag</p>
+        <p className={styles.footerCopy}>
+  © {new Date().getFullYear()} Lucky Pet Tag
+        </p>
       </footer>
     </main>
   );
@@ -363,62 +294,20 @@ function FactCard({
   icon,
   label,
   value,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  className?: string;
 }) {
   return (
-    <div className={styles.factCard}>
+    <div className={`${styles.factCard} ${className || ''}`}>
       <div className={styles.factIcon}>{icon}</div>
       <div>
         <span className={styles.factLabel}>{label}</span>
         <span className={styles.factValue}>{value}</span>
       </div>
     </div>
-  );
-}
-
-function DirectButton({
-  href,
-  label,
-  icon,
-  variant,
-  disabled,
-  external = false,
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  variant: 'red' | 'green' | 'dark';
-  disabled?: boolean;
-  external?: boolean;
-}) {
-  const variantClass =
-    variant === 'red'
-      ? styles.directRed
-      : variant === 'green'
-      ? styles.directGreen
-      : styles.directDark;
-
-  if (disabled) {
-    return (
-      <div className={`${styles.directButton} ${styles.directDisabled}`}>
-        {icon}
-        {label}
-      </div>
-    );
-  }
-
-  return (
-    <a
-      href={href}
-      target={external ? '_blank' : undefined}
-      rel={external ? 'noreferrer' : undefined}
-      className={`${styles.directButton} ${variantClass}`}
-    >
-      {icon}
-      {label}
-    </a>
   );
 }

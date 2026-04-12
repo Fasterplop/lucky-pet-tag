@@ -1,149 +1,136 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { LoaderCircle, MapPin, MessageCircle, SearchCheck, Send } from 'lucide-react';
+import { useState } from 'react';
+import { LoaderCircle, MapPin, MessageCircle } from 'lucide-react';
 import styles from './PublicProfile.module.css';
 
 type FinderContactPanelProps = {
-  petId: string;
   petName: string;
+  whatsappPhone: string;
 };
 
 export default function FinderContactPanel({
-  petId,
   petName,
+  whatsappPhone,
 }: FinderContactPanelProps) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [website, setWebsite] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
-  function openComposer(prefill?: string) {
-    setOpen(true);
-    setSuccess('');
-    setError('');
-
-    if (prefill && !message.trim()) {
-      setMessage(prefill);
-    }
-
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 80);
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (!message.trim()) {
-      setError('Please write a short message before sending.');
+  function openWhatsappMessage() {
+    if (!whatsappPhone) {
+      setError('WhatsApp contact is not available right now.');
       return;
     }
 
-    setLoading(true);
     setError('');
-    setSuccess('');
 
-    try {
-      const response = await fetch('/api/notify-owner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          petId,
-          message: message.trim(),
-          website,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Could not send the alert.');
-      }
-
-      setSuccess('Your alert was sent to the owner.');
-      setMessage('');
-      setWebsite('');
-      setOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
-    } finally {
-      setLoading(false);
-    }
+    const text = encodeURIComponent(`Hi, I found ${petName} 🐾`);
+    window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
   }
+
+  function openWhatsappLocationFallback() {
+    const fallbackText = encodeURIComponent(
+      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon 💛`
+    );
+
+    window.open(`https://wa.me/${whatsappPhone}?text=${fallbackText}`, '_blank');
+  }
+
+  function openWhatsappLocation() {
+    if (!whatsappPhone) {
+      setError('WhatsApp contact is not available right now.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      openWhatsappLocationFallback();
+      return;
+    }
+
+    setLoadingLocation(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
+
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const appleMapsUrl = `https://maps.apple.com/?ll=${latitude},${longitude}`;
+
+        const text = encodeURIComponent(
+          `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring Wimbo back home safely. I hope this helps you reunite very soon. \n\nGoogle Maps: ${googleMapsUrl}\nApple Maps: ${appleMapsUrl}`
+        );
+
+        window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
+        setLoadingLocation(false);
+      },
+      () => {
+        setLoadingLocation(false);
+        openWhatsappLocationFallback();
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  /*
+  // FUTURE OPTION: if you want to bring email back later
+  async function sendEmailMessageInFuture() {
+    await fetch('/api/notify-owner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        petId: 'ADD_PET_ID_BACK_HERE',
+        message: `Hi, I found ${petName} 🐾`,
+        website: '',
+      }),
+    });
+  }
+  */
+
+  /*
+  // FUTURE OPTION: if you want to support SMS or another channel later
+  function sendSmsInFuture() {
+    const text = encodeURIComponent(`Hi, I found ${petName} 🐾`);
+    window.open(`sms:${whatsappPhone}?body=${text}`, '_self');
+  }
+  */
 
   return (
     <div className={styles.actionCard}>
       <div className={styles.center}>
-        <div className={styles.actionIconWrap}>
-          <SearchCheck size={30} />
-        </div>
-
-        <h2 className={styles.actionTitle}>Did you find {petName}?</h2>
+        <h2 className={styles.actionTitle}>Help me get back to my family</h2>
 
         <p className={styles.actionText}>
-          Thank you for looking out. Use the options below to safely notify the owner
-          without exposing private information.
+          A quick WhatsApp message can help reunite this pet with the people who
+          love them.
         </p>
 
         <div className={styles.actionsStack}>
           <button
             type="button"
-            className={styles.primaryButton}
-            onClick={() =>
-              openComposer(`Hi, I found ${petName} and wanted to report it.`)
-            }
+            className={styles.secondaryButton}
+            onClick={openWhatsappMessage}
           >
-            <MapPin size={20} />
-            I found this pet wandering
+            <MessageCircle size={20} />
+            Message my family
           </button>
 
           <button
             type="button"
-            className={styles.secondaryButton}
-            onClick={() => openComposer()}
+            className={styles.primaryButton}
+            onClick={openWhatsappLocation}
+            disabled={loadingLocation}
           >
-            <MessageCircle size={20} />
-            Message Owner Directly
+            {loadingLocation ? (
+              <LoaderCircle size={18} className={styles.spinIcon} />
+            ) : (
+              <MapPin size={20} />
+            )}
+            Send my location to my family
           </button>
         </div>
 
-        {open ? (
-          <form className={styles.formCard} onSubmit={handleSubmit}>
-            <label className={styles.label}>Message</label>
-            <textarea
-              ref={textareaRef}
-              className={styles.textarea}
-              placeholder="Tell the owner what happened..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-
-            <input
-              type="text"
-              tabIndex={-1}
-              autoComplete="off"
-              aria-hidden="true"
-              className={styles.hiddenTrap}
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
-
-            {error ? <p className={styles.error}>{error}</p> : null}
-            {success ? <p className={styles.success}>{success}</p> : null}
-
-            <button className={styles.submitButton} disabled={loading} type="submit">
-              {loading ? (
-                <LoaderCircle size={18} className="animate-spin" />
-              ) : (
-                <Send size={18} />
-              )}
-              Send alert to owner
-            </button>
-          </form>
-        ) : null}
+        {error ? <p className={styles.error}>{error}</p> : null}
       </div>
     </div>
   );

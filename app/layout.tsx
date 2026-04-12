@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lucky Pet Tag - Admin Console",
+  title: "Lucky Pet Tag - App",
   description: "Secure and Smart Pet Identification System",
 };
 
