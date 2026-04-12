@@ -196,7 +196,7 @@ export default function AdminDashboard() {
         return; 
       }
 
-      await executeCreateProfile(data, null);
+      await executeCreateProfile(data, null, false);
 
     } catch (err: any) {
       console.error("Error checking email:", err);
@@ -204,18 +204,20 @@ export default function AdminDashboard() {
     }
   };
 
-  const executeCreateProfile = async (data: any, existingOwnerId: string | null) => {
+  const executeCreateProfile = async (data: any, existingOwnerId: string | null, overwriteOwner: boolean = true) => {
     try {
       let ownerId = existingOwnerId;
 
       if (ownerId) {
-        const { error: updateErr } = await supabase.from('owners').update({
-          full_name: data.full_name,
-          address: data.address,
-          phone_number: data.phone_number,
-          has_whatsapp: data.has_whatsapp
-        }).eq('id', ownerId);
-        if (updateErr) throw updateErr;
+        if (overwriteOwner) {
+          const { error: updateErr } = await supabase.from('owners').update({
+            full_name: data.full_name,
+            address: data.address,
+            phone_number: data.phone_number,
+            has_whatsapp: data.has_whatsapp
+          }).eq('id', ownerId);
+          if (updateErr) throw updateErr;
+        }
       } else {
         const { data: newOwner, error: ownerErr } = await supabase.from('owners').insert([{
           email: data.email,
@@ -251,8 +253,12 @@ export default function AdminDashboard() {
         photoUrl = supabase.storage.from('lucky-pet-assets').getPublicUrl(fileName).data.publicUrl;
       }
 
-      const publicUrl = `https://id.luckypetag.com/${slug}`;
-      const qrRes = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(publicUrl)}`);
+      const qrBaseUrl =
+  process.env.NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL ||
+  'https://luckypetag.com/id';
+
+const publicUrl = `${qrBaseUrl}/${slug}`;
+      const qrRes = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(publicUrl)}`);
       const qrBlob = await qrRes.blob();
       const qrName = `Order_QR_${slug}.png`;
       await supabase.storage.from('lucky-pet-assets').upload(qrName, qrBlob, { contentType: 'image/png' });
@@ -273,7 +279,15 @@ export default function AdminDashboard() {
 
   const confirmOverwrite = async () => {
     setIsOverwriting(true);
-    await executeCreateProfile(pendingProfileData, pendingProfileData.existingOwnerId);
+    await executeCreateProfile(pendingProfileData, pendingProfileData.existingOwnerId, true);
+    setIsOverwriting(false);
+    setShowOverwriteModal(false);
+    setPendingProfileData(null);
+  };
+
+  const confirmKeepExisting = async () => {
+    setIsOverwriting(true);
+    await executeCreateProfile(pendingProfileData, pendingProfileData.existingOwnerId, false);
     setIsOverwriting(false);
     setShowOverwriteModal(false);
     setPendingProfileData(null);
@@ -444,31 +458,39 @@ export default function AdminDashboard() {
       )}
 
       {/* OVERWRITE WARNING MODAL */}
+      {/* OVERWRITE WARNING MODAL (UPDATED) */}
       {showOverwriteModal && pendingProfileData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
             <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center text-[#ba1a1a] mb-6 mx-auto">
-              <MailWarning className="w-8 h-8" />
+              <span className="material-symbols-outlined text-3xl">contact_mail</span>
             </div>
             <h2 className="text-xl font-headline font-bold text-center mb-2">Email Already Exists!</h2>
-            <p className="text-[#6f7a72] text-center text-sm mb-8">
+            <p className="text-[#6f7a72] text-center text-sm mb-6">
               The email <strong>{pendingProfileData.email}</strong> is already registered to <strong>{pendingProfileData.existingOwnerName || 'another owner'}</strong>.<br/><br/>
-              If you continue, their contact information will be <strong>overwritten</strong> with the new details you just provided. Do you want to proceed?
+              How would you like to handle the owner's contact information?
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-3">
               <button 
-                onClick={() => { setShowOverwriteModal(false); setPendingProfileData(null); }} 
+                onClick={confirmKeepExisting} 
                 disabled={isOverwriting}
-                className="flex-1 py-3 rounded-full font-bold text-[#3f4942] bg-[#e1eae5] hover:bg-[#dce5e0] transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-full font-bold text-white bg-[#0b6946] shadow-lg shadow-[#0b6946]/30 hover:scale-95 transition-transform cursor-pointer disabled:opacity-50"
               >
-                Cancel
+                {isOverwriting ? 'Processing...' : 'Keep Existing Info'}
               </button>
               <button 
                 onClick={confirmOverwrite} 
                 disabled={isOverwriting}
-                className="flex-1 py-3 rounded-full font-bold text-white bg-[#ba1a1a] shadow-lg shadow-[#ba1a1a]/30 hover:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-full font-bold text-[#ba1a1a] bg-[#ffdad6] hover:bg-[#ba1a1a] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isOverwriting ? 'Processing...' : 'Yes, Overwrite'}
+                Overwrite with New Info
+              </button>
+              <button 
+                onClick={() => { setShowOverwriteModal(false); setPendingProfileData(null); }} 
+                disabled={isOverwriting}
+                className="w-full py-3 rounded-full font-bold text-[#3f4942] bg-[#e1eae5] hover:bg-[#dce5e0] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -749,6 +771,12 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
 
   if (!pet) return null;
 
+  // Define publicUrl for the pet profile
+  const qrBaseUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL ||
+    'https://luckypetag.com/id';
+  const publicUrl = `${qrBaseUrl}/${pet.slug}`;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
@@ -868,13 +896,15 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             <div className="bg-[#edf6f1] p-5 rounded-3xl border border-[#dce5e0] space-y-4">
                <div>
                   <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-1">Public Profile Link</label>
+
+                  
                   <a 
-                    href={`https://id.luckypetag.com/${pet.slug}`} 
+                    href={publicUrl} 
                     target="_blank" 
                     rel="noreferrer" 
                     className="text-sm font-bold text-[#0b6946] hover:underline flex items-center gap-2 truncate"
                   >
-                    id.luckypetag.com/{pet.slug}
+                    {publicUrl}
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   </a>
                </div>
@@ -1032,7 +1062,7 @@ function CreateView({ onBack, onSave }: any) {
             </div>
             
             <Input name="full_name" label="Owner Name" />
-            <Input name="address" label="Shipping Address" />
+            <Input name="address" label="Address (Default: Shipping Address from Shopify)" />
             
             <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3">
                <Input name="phone_number" label="Phone Number" />

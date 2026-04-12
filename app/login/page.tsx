@@ -32,18 +32,18 @@ export default function LoginPage() {
     try {
       if (isLogin) {
         // Sign In
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw new Error('Invalid email or password.');
         
-        await redirectUser(email);
+        // EL ARREGLO: Pasamos el correo oficial normalizado de Supabase, no el texto del input
+        await redirectUser(authData.user?.email || email);
       } else {
         // Sign Up
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) throw new Error(signUpError.message);
         
-        setMessage('Account created. Please check your email to confirm, or sign in directly.');
-        setIsLogin(true);
-        setPassword('');
+        // ¡NUEVO!: Como ya no hay que confirmar correo, lo redirigimos directamente a su panel
+        await redirectUser(signUpData.user?.email || email);
       }
     } catch (err: any) {
       setError(err.message);
@@ -77,11 +77,12 @@ export default function LoginPage() {
 
   // --- SMART REDIRECTION ---
   const redirectUser = async (userEmail: string) => {
+    const normalizedEmail = userEmail.toLowerCase().trim();
     const { data: adminUser } = await supabase
       .from('admin_users')
       .select('email')
-      .eq('email', userEmail)
-      .single();
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
     if (adminUser) {
       router.push('/admin');

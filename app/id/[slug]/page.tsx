@@ -280,7 +280,7 @@ export default async function PublicPetProfilePage({
                       Allergies / Medical Notes
                     </h2>
                     <p className={styles.allergyText}>
-                      Medical notes: {pet.allergies}
+                      {pet.allergies}
                     </p>
                   </div>
                 </div>

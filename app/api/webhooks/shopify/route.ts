@@ -82,7 +82,11 @@ export async function POST(request: Request) {
 
     // --- QR CODE GENERATION ---
 
-    const publicUrl = `https://id.luckypetag.com/${slug}`;
+    const qrBaseUrl =
+  process.env.NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL ||
+  'https://luckypetag.com/id';
+
+    const publicUrl = `${qrBaseUrl}/${slug}`;
     const qrBuffer = await QRCode.toBuffer(publicUrl);
 
     const fileName = `Order_QR_${slug}.png`;
