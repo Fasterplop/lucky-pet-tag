@@ -117,7 +117,11 @@ export default function AdminDashboard() {
     }
 
     if (!admin) {
-      window.location.replace('https://app.luckypetag.com/');
+      // 1. Limpiamos la sesión "fantasma" en el subdominio admin
+      await supabase.auth.signOut();
+      
+      // 2. Redirigimos a app o al login
+      window.location.replace('https://app.luckypetag.com/login');
       return;
     }
 

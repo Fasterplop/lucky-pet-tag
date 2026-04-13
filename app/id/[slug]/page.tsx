@@ -129,7 +129,7 @@ export default async function PublicPetProfilePage({
     <main className={`${styles.page} ${inter.variable} ${jakarta.variable}`}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/" className={styles.brand} aria-label="Lucky Pet Tag home">
+          <Link href="https://luckypetag.com" className={styles.brand} aria-label="Lucky Pet Tag home">
             <img
               src="/logo.webp"
               alt="Lucky Pet Tag"
