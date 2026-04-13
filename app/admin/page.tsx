@@ -100,7 +100,7 @@ export default function AdminDashboard() {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      window.location.replace('https://app.luckypetag.com/login');
+      window.location.replace('https://admin.luckypetag.com/login');
       return;
     }
 

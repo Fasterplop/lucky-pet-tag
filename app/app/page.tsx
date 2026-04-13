@@ -604,7 +604,7 @@ export default function OwnerPortalPage() {
 
         {pets.length === 0 ? (
           <div className={styles.emptyCard}>
-            <Heart size={36} className={styles.emptyIcon} />
+            
             <h3 className={styles.emptyTitle}>Your gallery is waiting.</h3>
             <p className={styles.emptyText}>
               Add your first pet and create a profile that helps them come home

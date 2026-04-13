@@ -56,7 +56,7 @@ export default function UpdatePasswordPage() {
       setMessage('Password updated successfully! Redirecting to your dashboard...');
       
       setTimeout(() => {
-        router.push('/app');
+        window.location.replace('https://app.luckypetag.com/');
       }, 2000);
 
     } catch (err: any) {
