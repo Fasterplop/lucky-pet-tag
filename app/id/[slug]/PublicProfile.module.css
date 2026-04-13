@@ -2,6 +2,7 @@
   --bg: #f2fbf6;
   --surface: #edf6f1;
   --surface-2: #ffffff;
+  --surface-soft: #f6fbf8;
   --text: #151d1b;
   --muted: #486c59;
   --muted-2: #6f7a72;
@@ -13,10 +14,8 @@
   --warning-text: #7a341a;
   --warning-chip: #ffe5d0;
   --shadow: 0 18px 36px rgba(11, 105, 70, 0.07);
-
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, #f8fffb 0%, var(--bg) 42%, #edf6f1 100%);
+  background: radial-gradient(circle at top left, #f8fffb 0%, var(--bg) 42%, #edf6f1 100%);
   color: var(--text);
 }
 
@@ -45,8 +44,7 @@
   width: 88px;
   height: auto;
   display: block;
-  filter: brightness(0) saturate(100%) invert(48%) sepia(61%) saturate(417%)
-    hue-rotate(104deg) brightness(89%) contrast(86%);
+  filter: brightness(0) saturate(100%) invert(48%) sepia(61%) saturate(417%) hue-rotate(104deg) brightness(89%) contrast(86%);
 }
 
 .ownerLink {
@@ -65,39 +63,50 @@
   color: var(--primary);
 }
 
+/* ===== SECTION / MAIN LAYOUT ===== */
+
 .shell {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 30px 24px 24px;
+  padding: 20px 24px 24px;
 }
 
-.grid {
+.layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 400px);
-  grid-template-areas: "profile actions";
+  gap: 18px;
+}
+
+.heroBlock {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 368px minmax(320px, 400px);
   justify-content: center;
-  gap: 34px;
+  gap: 22px;
   align-items: start;
 }
 
-.profileColumn {
-  grid-area: profile;
-  min-width: 0;
+.detailsColumn {
   width: 100%;
-  max-width: 620px;
+  max-width: 368px;
   justify-self: center;
 }
 
-.actionColumn {
-  grid-area: actions;
+.contactColumn {
   width: 100%;
   max-width: 400px;
-  justify-self: end;
+  justify-self: center;
 }
 
 .photoWrap {
   position: relative;
-  width: min(100%, 300px);
+  width: min(100%, 320px);
   margin: 0 auto;
 }
 
@@ -107,8 +116,8 @@
   border-radius: 9999px;
   overflow: hidden;
   background: #e7f0eb;
-  box-shadow: 0 20px 40px -16px rgba(11, 105, 70, 0.12);
-  border: 6px solid #ffffff;
+  box-shadow: 0 16px 28px -16px rgba(11, 105, 70, 0.14);
+  border: 4px solid #ffffff;
 }
 
 .photo {
@@ -126,24 +135,26 @@
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;
+  text-align: center;
+  padding: 12px;
 }
 
 .modePill {
   position: absolute;
-  right: 14px;
-  bottom: 12px;
+  right: 8px;
+  bottom: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 13px;
+  gap: 6px;
+  padding: 7px 10px;
   border-radius: 9999px;
   color: white;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border: 4px solid var(--bg);
+  border: 3px solid var(--bg);
 }
 
 .modeProtected {
@@ -155,7 +166,7 @@
 }
 
 .identity {
-  margin-top: 22px;
+  margin-top: 4px;
   text-align: center;
 }
 
@@ -167,22 +178,37 @@
 .name {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: clamp(40px, 4.6vw, 58px);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(30px, 3.8vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.04em;
   font-weight: 800;
   text-align: center;
 }
 
 .tagline {
-  margin: 14px auto 0;
-  max-width: 520px;
+  margin: 8px auto 0;
+  max-width: 620px;
   color: #3f4942;
-  font-size: clamp(17px, 1.5vw, 21px);
-  line-height: 1.5;
+  font-size: clamp(14px, 1.2vw, 18px);
+  line-height: 1.45;
   font-weight: 500;
   text-align: center;
 }
+
+.detailsGrid {
+  width: 368px;
+  max-width: 100%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detailsSpan {
+  grid-column: 1 / -1;
+}
+
+/* ===== EXISTING CARDS / CONTENT ===== */
 
 .factGridRight {
   margin-top: 14px;
@@ -192,10 +218,10 @@
 }
 
 .factCard {
-  min-height: 106px;
-  border-radius: 20px;
+  min-height: 82px;
+  border-radius: 16px;
   background: var(--surface);
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -203,7 +229,7 @@
 
 .factIcon {
   color: var(--primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .factLabel {
@@ -211,40 +237,40 @@
   color: var(--muted);
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .factValue {
   display: block;
-  margin-top: 6px;
-  font-size: 16px;
+  margin-top: 4px;
+  font-size: 14px;
   line-height: 1.25;
   font-weight: 700;
 }
 
 .allergyCard {
   width: 100%;
-  margin-top: 18px;
-  border-radius: 22px;
+  margin-top: 0;
+  border-radius: 16px;
   background: var(--warning-bg);
-  padding: 18px 20px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.02);
+  padding: 14px 16px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02);
 }
 
 .allergyInner {
   display: grid;
-  grid-template-columns: 46px 1fr;
-  gap: 14px;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
   align-items: start;
 }
 
 .allergyIconWrap {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--warning-chip);
   color: #ea580c;
 }
@@ -252,54 +278,54 @@
 .allergyTitle {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.15;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .allergyText {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--warning-text);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .actionCard {
   width: 100%;
   margin-top: 0;
-  border-radius: 30px;
+  border-radius: 22px;
   background: var(--surface-2);
   box-shadow: var(--shadow);
-  padding: 28px 24px 22px;
+  padding: 18px 16px 16px;
 }
 
 .center {
   text-align: center;
-  max-width: 420px;
+  max-width: 360px;
   margin: 0 auto;
 }
 
 .actionTitle {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: clamp(26px, 2.8vw, 40px);
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   font-weight: 800;
 }
 
 .actionText {
-  margin: 14px auto 0;
-  max-width: 360px;
+  margin: 10px auto 0;
+  max-width: 320px;
   color: #3f4942;
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .actionsStack {
-  margin-top: 24px;
+  margin-top: 16px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .primaryButton,
@@ -322,14 +348,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 56px;
-  padding: 14px 18px;
-  border-radius: 18px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   box-shadow: inset 0 0 0 1px rgba(11, 105, 70, 0.12);
 }
@@ -338,32 +364,32 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 58px;
-  padding: 14px 18px;
-  border-radius: 18px;
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   color: white;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
 }
 
 .locationUnavailableNote {
-  border-radius: 18px;
+  border-radius: 14px;
   background: #f6fbf8;
-  padding: 14px 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--muted);
   box-shadow: inset 0 0 0 1px rgba(11, 105, 70, 0.08);
 }
 
 .formCard {
-  margin-top: 16px;
-  border-radius: 24px;
+  margin-top: 12px;
+  border-radius: 18px;
   background: var(--surface);
-  padding: 18px;
+  padding: 14px;
   text-align: left;
 }
 
@@ -383,11 +409,11 @@
   outline: none;
   background: white;
   color: var(--text);
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
   font: inherit;
   box-sizing: border-box;
-  min-height: 120px;
+  min-height: 96px;
   resize: vertical;
 }
 
@@ -409,14 +435,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 54px;
-  margin-top: 14px;
-  border-radius: 18px;
+  min-height: 48px;
+  margin-top: 12px;
+  border-radius: 14px;
   background: #151d1b;
   color: white;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -430,21 +456,24 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 28px;
-  margin-top: 20px;
+  gap: 14px;
+  margin-top: 12px;
   color: var(--muted-2);
   opacity: 0.78;
+  flex-wrap: wrap;
 }
 
 .trustItem {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+
+/* ===== FOOTER / REST OF PAGE ===== */
 
 .footer {
   max-width: 1100px;
@@ -526,24 +555,31 @@
 }
 
 @media (max-width: 1100px) {
-  .grid {
+  .bottomGrid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "profile"
-      "actions";
     gap: 28px;
   }
 
-  .profileColumn,
-  .actionColumn {
+  .detailsColumn,
+  .contactColumn {
     width: 100%;
     max-width: 100%;
     justify-self: stretch;
   }
+
+  .detailsGrid {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detailsSpan {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 760px) {
-  .headerInner,
+    .headerInner,
   .shell,
   .footer {
     padding-left: 16px;
@@ -580,6 +616,17 @@
 
   .tagline {
     font-size: 17px;
+  }
+
+  .detailsGrid {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .detailsSpan {
+    grid-column: 1 / -1;
   }
 
   .factGridRight {
@@ -645,5 +692,10 @@
 
   .footerLinks {
     gap: 18px;
+  }
+
+  .actionsStack {
+    margin-top: 12px;
+    gap: 8px;
   }
 }
