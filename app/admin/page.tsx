@@ -973,9 +973,9 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             <Input name="full_name" label="Owner Name" value={pet.owners?.full_name || ''} />
             <Input name="address" label="Address (Default: Shipping Address from Shopify)" value={pet.owners?.address || ''} />
             
-            <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3">
+            {/* <div className="bg-[#edf6f1] p-4 rounded-3xl border border-[#dce5e0] space-y-3"> */}
                <Input name="phone_number" label="Phone Number" value={pet.owners?.phone_number || ''} />
-               <label className="flex items-center gap-3 ml-4 cursor-pointer w-max">
+               {/* <label className="flex items-center gap-3 ml-4 cursor-pointer w-max">
                  <input 
                    type="checkbox" 
                    name="has_whatsapp" 
@@ -983,8 +983,8 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                    className="w-4 h-4 rounded border-[#a8cfb9] text-[#0b6946] focus:ring-[#0b6946] bg-white cursor-pointer" 
                  />
                  <span className="text-[11px] font-bold text-[#426654] uppercase tracking-wide">This number has WhatsApp</span>
-               </label>
-            </div>
+               </label> */}
+            {/* </div> */}
             
           </div>
         </section>

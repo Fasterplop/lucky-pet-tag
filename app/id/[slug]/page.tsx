@@ -271,17 +271,7 @@ export default async function PublicPetProfilePage({
         </div>
 
         <p className={styles.footerBrand}>Powered by Lucky Pet Tag</p>
-        <p className={styles.footerMadeBy}>
-          Designed by{' '}
-          <a
-            href="https://hikevodesign.com"
-            target="_blank"
-            rel="noreferrer"
-            className={styles.footerMadeByLink}
-          >
-            Hikevo Design
-          </a>
-        </p>
+        
         <p className={styles.footerCopy}>
   © {new Date().getFullYear()} Lucky Pet Tag
         </p>

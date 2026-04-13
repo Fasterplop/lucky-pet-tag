@@ -63,7 +63,7 @@ export default function FinderContactPanel({
           `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring ${petName} back home safely. I hope this helps you reunite very soon. \n\nGoogle Maps: ${googleMapsUrl}`
         );
 
-        window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
+        window.location.href = `https://wa.me/${whatsappPhone}?text=${text}`;
         setLoadingLocation(false);
       },
       () => {

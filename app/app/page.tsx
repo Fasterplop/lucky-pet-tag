@@ -789,6 +789,17 @@ export default function OwnerPortalPage() {
                               </button>
                             ) : null}
                           </div>
+
+                          <p style={{ 
+  fontSize: '0.75rem', 
+  color: 'var(--text-secondary, #666)', 
+  marginTop: '0.75rem', 
+  textAlign: 'center',
+  lineHeight: '1.4'
+}}>
+  <strong>Note:</strong> This photo becomes your pet’s identity. Make sure the face is fully visible and centered within the circle. A front-facing image works best. If the face isn’t clear or complete, please choose another photo. High-quality images ensure a sharper, more precise engraving.
+</p>
+
                         </div>
 
                         <div className={styles.formGrid}>
