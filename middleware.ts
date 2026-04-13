@@ -2,34 +2,39 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Obtenemos la ruta que el usuario está buscando (ej. /x7k9)
   const url = request.nextUrl;
-
-  // Obtenemos el dominio desde donde entra (ej. admin.luckypetag.com o localhost:3000)
   const hostname = request.headers.get('host') || '';
+  const pathname = url.pathname;
 
-  // 1. Si entra por admin.luckypetag.com -> Lo mandamos a la carpeta oculta /admin
+  // Rutas globales que NO deben reescribirse por subdominio
+  const globalRoutes = ['/login', '/update-password'];
+
+  const isGlobalRoute = globalRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isGlobalRoute) {
+    return NextResponse.next();
+  }
+
+  // admin.luckypetag.com -> /admin/*
   if (hostname.startsWith('admin.')) {
-    return NextResponse.rewrite(new URL(`/admin${url.pathname}`, request.url));
+    return NextResponse.rewrite(new URL(`/admin${pathname}`, request.url));
   }
 
-  // 2. Si entra por id.luckypetag.com -> Lo mandamos a la carpeta oculta /id
+  // id.luckypetag.com -> /id/*
   if (hostname.startsWith('id.')) {
-    return NextResponse.rewrite(new URL(`/id${url.pathname}`, request.url));
+    return NextResponse.rewrite(new URL(`/id${pathname}`, request.url));
   }
 
-  // 3. Si entra por app.luckypetag.com -> Lo mandamos a la carpeta oculta /app
+  // app.luckypetag.com -> /app/*
   if (hostname.startsWith('app.')) {
-    return NextResponse.rewrite(new URL(`/app${url.pathname}`, request.url));
+    return NextResponse.rewrite(new URL(`/app${pathname}`, request.url));
   }
 
-  // Si entra por el dominio principal normal, dejamos que siga su camino
   return NextResponse.next();
 }
 
-// Esto le dice al guardia que ignore las imágenes y archivos de sistema para no poner lenta la página
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
