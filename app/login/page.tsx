@@ -86,11 +86,11 @@ export default function LoginPage() {
     .maybeSingle();
 
   if (adminUser) {
-    window.location.href = 'https://admin.luckypetag.com/';
+    window.location.replace('https://admin.luckypetag.com/');
     return;
   }
 
-  window.location.href = 'https://app.luckypetag.com/';
+  window.location.replace('https://app.luckypetag.com/');
 };
   // --- SVG ICONS ---
   const EyeIcon = () => (
