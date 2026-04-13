@@ -93,20 +93,41 @@ export default function AdminDashboard() {
     if (adminsData) setAdmins(adminsData);
   };
 
-  useEffect(() => {
-    async function initAdmin() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return router.push('/login');
+ useEffect(() => {
+  async function initAdmin() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const { data: admin } = await supabase.from('admin_users').select('*').eq('email', session.user.email).single();
-      if (!admin) return router.push('/app');
-      setAdminData(admin);
-
-      await refreshData();
-      setLoading(false);
+    if (!session) {
+      window.location.replace('https://app.luckypetag.com/login');
+      return;
     }
-    initAdmin();
-  }, [router]);
+
+    const normalizedEmail = (session.user.email || '').toLowerCase().trim();
+
+    const { data: admin, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .ilike('email', normalizedEmail)
+      .maybeSingle();
+
+    if (adminError) {
+      console.error('Admin lookup failed:', adminError.message);
+    }
+
+    if (!admin) {
+      window.location.replace('https://app.luckypetag.com/');
+      return;
+    }
+
+    setAdminData(admin);
+    await refreshData();
+    setLoading(false);
+  }
+
+  initAdmin();
+}, []);
 
   const requestDeletePet = (id: string, name: string) => {
     setModalConfig({ isOpen: true, type: 'pet', id, title: `the pet "${name}"` });
