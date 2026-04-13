@@ -160,7 +160,7 @@ export default function OwnerPortalPage() {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      window.location.href = 'https://app.luckypetag.com/login';
+      window.location.replace('https://app.luckypetag.com/login');
       return;
     }
 
@@ -172,7 +172,7 @@ export default function OwnerPortalPage() {
 
     if (ownerError || !ownerData) {
       console.error('Owner lookup failed:', ownerError?.message);
-      window.location.href = 'https://app.luckypetag.com/login';
+      window.location.replace('https://app.luckypetag.com/login');
       return;
     }
 
@@ -210,7 +210,7 @@ export default function OwnerPortalPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = 'https://app.luckypetag.com/login';
+    window.location.replace('https://app.luckypetag.com/login');
   }
 
   function startEditingPet(pet: Pet) {

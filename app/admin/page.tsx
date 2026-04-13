@@ -320,7 +320,7 @@ const publicUrl = `${qrBaseUrl}/${slug}`;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = 'https://app.luckypetag.com/login';
+    window.location.replace('https://app.luckypetag.com/login');
   };
 
   const filteredPets = pets.filter((p: any) => {
