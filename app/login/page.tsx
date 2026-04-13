@@ -85,22 +85,12 @@ export default function LoginPage() {
     .eq('email', normalizedEmail)
     .maybeSingle();
 
-  const hostname =
-    typeof window !== 'undefined' ? window.location.hostname : '';
-
   if (adminUser) {
-    if (hostname.startsWith('admin.')) {
-      router.push('/');
-    } else {
-      window.location.href = 'https://admin.luckypetag.com/';
-    }
-  } else {
-    if (hostname.startsWith('app.')) {
-      router.push('/');
-    } else {
-      window.location.href = 'https://app.luckypetag.com/';
-    }
+    window.location.href = 'https://admin.luckypetag.com/';
+    return;
   }
+
+  window.location.href = 'https://app.luckypetag.com/';
 };
   // --- SVG ICONS ---
   const EyeIcon = () => (
