@@ -503,7 +503,7 @@ export default function OwnerPortalPage() {
         <div className={styles.loadingWrap}>
           <div className={styles.loadingPill}>
             <Loader2 className={styles.spinIcon} size={18} />
-            <span>Loading your pet gallery...</span>
+            <span>Loading...</span>
           </div>
         </div>
       </main>
