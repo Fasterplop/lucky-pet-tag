@@ -24,13 +24,15 @@ export default function FinderContactPanel({
 
     setError('');
 
-    const text = encodeURIComponent(`Hi, I found ${petName} 🐾`);
+    const text = encodeURIComponent(
+  `Hi, I found ${petName}. I wanted to reach out right away in case this helps bring ${petName} back home safely.`
+);
     window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
   }
 
   function openWhatsappLocationFallback() {
     const fallbackText = encodeURIComponent(
-      `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring ${petName} back home safely. I hope this helps you reunite very soon!`
+      `Hi, I found ${petName}!. My phone couldn't get an automatic map link, please let me know when you see this!`
     );
 
     window.open(`https://wa.me/${whatsappPhone}?text=${fallbackText}`, '_blank');

@@ -123,7 +123,7 @@ export default async function PublicPetProfilePage({
   const phone = digitsOnly(owner?.phone_number);
   const canShareLocation = Boolean(phone && owner?.has_whatsapp);
 
-  const ownerPortalUrl = process.env.NEXT_PUBLIC_OWNER_PORTAL_URL || '/app';
+  const ownerPortalUrl = process.env.NEXT_PUBLIC_OWNER_PORTAL_URL || 'https://app.luckypetag.com';
 
   return (
     <main className={`${styles.page} ${inter.variable} ${jakarta.variable}`}>

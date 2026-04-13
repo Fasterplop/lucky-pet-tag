@@ -892,3 +892,7 @@
     min-width: 0;
   }
 }
+
+.emptyCard .primaryAction {
+  margin-top: 18px;
+}
