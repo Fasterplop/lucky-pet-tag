@@ -77,20 +77,31 @@ export default function LoginPage() {
 
   // --- SMART REDIRECTION ---
   const redirectUser = async (userEmail: string) => {
-    const normalizedEmail = userEmail.toLowerCase().trim();
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('email')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+  const normalizedEmail = userEmail.toLowerCase().trim();
 
-    if (adminUser) {
-      router.push('/admin');
+  const { data: adminUser } = await supabase
+    .from('admin_users')
+    .select('email')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  const hostname =
+    typeof window !== 'undefined' ? window.location.hostname : '';
+
+  if (adminUser) {
+    if (hostname.startsWith('admin.')) {
+      router.push('/');
     } else {
-      router.push('/app'); // User Dashboard
+      window.location.href = 'https://admin.luckypetag.com/';
     }
-  };
-
+  } else {
+    if (hostname.startsWith('app.')) {
+      router.push('/');
+    } else {
+      window.location.href = 'https://app.luckypetag.com/';
+    }
+  }
+};
   // --- SVG ICONS ---
   const EyeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
