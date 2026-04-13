@@ -27,7 +27,7 @@ export default function FinderContactPanel({
     const text = encodeURIComponent(
   `Hi, I found ${petName}. I wanted to reach out right away in case this helps bring ${petName} back home safely.`
 );
-    window.open(`https://wa.me/${whatsappPhone}?text=${text}`, '_blank');
+    window.location.href = `https://wa.me/${whatsappPhone}?text=${text}`;
   }
 
   function openWhatsappLocationFallback() {
