@@ -131,9 +131,7 @@ export default function LoginPage() {
                 <div className="flex flex-col items-center">
                   {/* Logo Image enlarged and tinted green via CSS filter */}
                   <div 
-                    className="w-24 sm:w-28 h-auto mb-4 cursor-pointer hover:opacity-80 transition-opacity" 
-                    onClick={() => router.push('/')}
-                  >
+                    className="w-24 sm:w-28 h-auto mb-4 hover:opacity-80 transition-opacity" >
                     <img 
                       src="/logo.webp" 
                       alt="Lucky Pet Tag" 
