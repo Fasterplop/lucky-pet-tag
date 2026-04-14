@@ -121,7 +121,6 @@ export default async function PublicPetProfilePage({
   const tagline =
     pet.pet_description?.trim() || "I'm friendly, please help me get back home.";
   const phone = digitsOnly(owner?.phone_number);
-  const canShareLocation = Boolean(phone && owner?.has_whatsapp);
 
   const ownerPortalUrl = process.env.NEXT_PUBLIC_OWNER_PORTAL_URL || 'https://app.luckypetag.com';
 
