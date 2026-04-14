@@ -87,7 +87,7 @@ export default function AdminDashboard() {
   const [isOverwriting, setIsOverwriting] = useState(false);
 
  const refreshData = async () => {
-  const { data: petsData } = await supabase
+  const { data: petsData, error: petsError } = await supabase
     .from('pets')
     .select(`*, owners (*)`)
     .order('created_at', { ascending: false });
@@ -96,11 +96,21 @@ export default function AdminDashboard() {
     .from('admin_users')
     .select('*');
 
-  if (petsData) setPets(petsData);
+  if (petsError) {
+    console.error('Error loading pets in admin:', petsError.message);
+  }
+
+  if (petsData) {
+    console.log('Pets loaded in admin:', petsData.length, petsData);
+    setPets(petsData);
+  }
+
   if (adminsData) setAdmins(adminsData);
 };
 
  useEffect(() => {
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
   async function initAdmin() {
     const {
       data: { session },
@@ -124,10 +134,7 @@ export default function AdminDashboard() {
     }
 
     if (!admin) {
-      // 1. Limpiamos la sesión "fantasma" en el subdominio admin
       await supabase.auth.signOut();
-      
-      // 2. Redirigimos a app o al login
       window.location.replace('https://app.luckypetag.com/login');
       return;
     }
@@ -135,11 +142,18 @@ export default function AdminDashboard() {
     setAdminData(admin);
     await refreshData();
     setLoading(false);
+
+    intervalId = setInterval(() => {
+      refreshData();
+    }, 10000); // cada 10 segundos
   }
 
   initAdmin();
-}, []);
 
+  return () => {
+    if (intervalId) clearInterval(intervalId);
+  };
+}, []);
   const requestDeletePet = (id: string, name: string) => {
     setModalConfig({ isOpen: true, type: 'pet', id, title: `the pet "${name}"` });
   };
