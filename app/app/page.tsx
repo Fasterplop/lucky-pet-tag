@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Check,
   ExternalLink,
@@ -100,8 +99,6 @@ function getStoragePathFromPublicUrl(url: string | null) {
 }
 
 export default function OwnerPortalPage() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [owner, setOwner] = useState<Owner | null>(null);
   const [ownerForm, setOwnerForm] = useState<OwnerFormState | null>(null);
@@ -123,6 +120,7 @@ export default function OwnerPortalPage() {
   const [toast, setToast] = useState<ToastState>(null);
 
   const yourPetsRef = useRef<HTMLElement | null>(null);
+  const hasAutoOpenedPetRef = useRef(false);
 
   const publicBaseUrl = useMemo(() => {
     return (
@@ -131,11 +129,10 @@ export default function OwnerPortalPage() {
     ).replace(/\/$/, '');
   }, []);
 
-
   const ownerDisplayName =
-  owner?.full_name?.trim().split(/\s+/)[0] ||
-  owner?.email?.split('@')[0] ||
-  'Owner';
+    owner?.full_name?.trim().split(/\s+/)[0] ||
+    owner?.email?.split('@')[0] ||
+    'Owner';
 
   useEffect(() => {
     void loadPortal();
@@ -154,45 +151,33 @@ export default function OwnerPortalPage() {
   }, [toast]);
 
   useEffect(() => {
-  if (loading) return;
-  if (window.location.hash !== '#your-pets') return;
+    if (loading) return;
+    if (pets.length === 0) return;
+    if (hasAutoOpenedPetRef.current) return;
+
+    const latestPet = pets[0];
+
+    setEditingPetId(latestPet.id);
+    setPetForm(makePetForm(latestPet));
+    hasAutoOpenedPetRef.current = true;
+  }, [loading, pets]);
 
   useEffect(() => {
-  if (loading) return;
-  if (pets.length === 0) return;
-  if (editingPetId) return;
+    if (loading) return;
 
-  useEffect(() => {
-  if (loading) return;
+    const shouldScroll = sessionStorage.getItem('scrollToYourPets') === '1';
+    if (!shouldScroll) return;
 
-  const shouldScroll = sessionStorage.getItem('scrollToYourPets') === '1';
-  if (!shouldScroll) return;
+    const timer = window.setTimeout(() => {
+      yourPetsRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      sessionStorage.removeItem('scrollToYourPets');
+    }, 180);
 
-  const timer = window.setTimeout(() => {
-    yourPetsRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-    sessionStorage.removeItem('scrollToYourPets');
-  }, 150);
-
-  return () => window.clearTimeout(timer);
-}, [loading, pets.length]);
-
-  const latestPet = pets[0]; // porque created_at está DESC
-  setEditingPetId(latestPet.id);
-  setPetForm(makePetForm(latestPet));
-}, [loading, pets, editingPetId]);
-
-  const timer = window.setTimeout(() => {
-    yourPetsRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  }, 120);
-
-  return () => window.clearTimeout(timer);
-}, [loading, pets.length]);
+    return () => window.clearTimeout(timer);
+  }, [loading, pets.length]);
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
@@ -594,10 +579,6 @@ export default function OwnerPortalPage() {
                 <span>Pet Gallery</span>
               </div>
 
-              {/* <h2 className={styles.heroTitle}>
-                A warmer place for the pets you love most.
-              </h2> */}
-
               <p className={styles.heroText}>
                 Keep each profile complete, beautiful, and ready to help your
                 companion get back home faster when it matters most.
@@ -639,9 +620,7 @@ export default function OwnerPortalPage() {
 
       <section id="your-pets" className={styles.shell} ref={yourPetsRef}>
         <div className={styles.sectionIntro}>
-
           <p className={styles.eyebrow}>Your Pets</p>
-          {/* <h2 className={styles.sectionTitle}>Pet gallery</h2> */}
           <p className={styles.sectionText}>
             Every profile here helps tell your pet’s story. Update details, open
             the public profile, or turn on Lost Mode when your companion needs
@@ -651,7 +630,6 @@ export default function OwnerPortalPage() {
 
         {pets.length === 0 ? (
           <div className={styles.emptyCard}>
-            
             <h3 className={styles.emptyTitle}>Your gallery is waiting.</h3>
             <p className={styles.emptyText}>
               Add your first pet and create a profile that helps them come home
@@ -838,12 +816,13 @@ export default function OwnerPortalPage() {
                           </div>
 
                           <p className={styles.photoEditorNote}>
-  <strong>Note:</strong> This photo becomes your pet’s identity. Make sure the
-  face is fully visible and centered within the circle. A front-facing image
-  works best. If the face isn’t clear or complete, please choose another photo.
-  High-quality images ensure a sharper, more precise engraving.
+                            <strong>Note:</strong> This photo becomes your pet’s
+                            identity. Make sure the face is fully visible and
+                            centered within the circle. A front-facing image
+                            works best. If the face isn’t clear or complete,
+                            please choose another photo. High-quality images
+                            ensure a sharper, more precise engraving.
                           </p>
-
                         </div>
 
                         <div className={styles.formGrid}>
@@ -959,9 +938,6 @@ export default function OwnerPortalPage() {
       <section id="owner-profile" className={styles.shell}>
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Owner Profile</p>
-          {/* <h2 className={styles.sectionTitle}>
-            Keep your contact details close to home.
-          </h2> */}
           <p className={styles.sectionText}>
             Make sure your information is accurate so your pet’s profile can
             help the right person reach you quickly when needed.
@@ -1016,23 +992,6 @@ export default function OwnerPortalPage() {
               disabled
             />
           </div>
-
-          {/*
-          <label className={styles.checkboxCard}>
-            <input
-              type="checkbox"
-              checked={Boolean(ownerForm?.has_whatsapp)}
-              onChange={(e) =>
-                setOwnerForm((current) =>
-                  current
-                    ? { ...current, has_whatsapp: e.target.checked }
-                    : current
-                )
-              }
-            />
-            <span>I use WhatsApp for Lost Mode contact</span>
-          </label>
-          */}
 
           <div className={styles.ownerActions}>
             <button
