@@ -53,7 +53,7 @@ export default function RootLayout({
               function googleTranslateElementInit() {
                 new window.google.translate.TranslateElement({
                   pageLanguage: 'en',
-                  includedLanguages: 'es',
+                  includedLanguages: 'es,en',
                   autoDisplay: false
                 }, 'google_translate_element');
               }
