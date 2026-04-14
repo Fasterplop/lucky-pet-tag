@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -122,6 +122,8 @@ export default function OwnerPortalPage() {
   const [banner, setBanner] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
+  const yourPetsRef = useRef<HTMLElement | null>(null);
+
   const publicBaseUrl = useMemo(() => {
     return (
       process.env.NEXT_PUBLIC_PUBLIC_PET_PROFILE_BASE_URL ||
@@ -149,6 +151,20 @@ export default function OwnerPortalPage() {
     const timer = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+  if (loading) return;
+  if (window.location.hash !== '#your-pets') return;
+
+  const timer = window.setTimeout(() => {
+    yourPetsRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, 120);
+
+  return () => window.clearTimeout(timer);
+}, [loading, pets.length]);
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
@@ -593,8 +609,9 @@ export default function OwnerPortalPage() {
         </div>
       </section>
 
-      <section className={styles.shell}>
+      <section className={styles.shell} ref={yourPetsRef}>
         <div className={styles.sectionIntro}>
+
           <p className={styles.eyebrow}>Your Pets</p>
           {/* <h2 className={styles.sectionTitle}>Pet gallery</h2> */}
           <p className={styles.sectionText}>

@@ -90,7 +90,7 @@ export default function LoginPage() {
     return;
   }
 
-  window.location.replace('https://app.luckypetag.com/');
+  window.location.replace('https://app.luckypetag.com/#your-pets');
 };
   // --- SVG ICONS ---
   const EyeIcon = () => (

@@ -913,3 +913,7 @@
     text-align: center;
   }
 }
+
+#your-pets {
+  scroll-margin-top: 24px;
+}
