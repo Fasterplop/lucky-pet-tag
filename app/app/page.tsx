@@ -156,6 +156,16 @@ export default function OwnerPortalPage() {
   if (loading) return;
   if (window.location.hash !== '#your-pets') return;
 
+  useEffect(() => {
+  if (loading) return;
+  if (pets.length === 0) return;
+  if (editingPetId) return;
+
+  const latestPet = pets[0]; // porque created_at está DESC
+  setEditingPetId(latestPet.id);
+  setPetForm(makePetForm(latestPet));
+}, [loading, pets, editingPetId]);
+
   const timer = window.setTimeout(() => {
     yourPetsRef.current?.scrollIntoView({
       behavior: 'smooth',
