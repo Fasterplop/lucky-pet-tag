@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
-import { parsePhoneNumberFromString, CountryCode } from 'libphonenumber-js';
+import {
+  parsePhoneNumberFromString,
+  CountryCode,
+} from 'libphonenumber-js';
 import { supabaseAdmin } from '../../../../lib/supabase-admin';
 
 const generateUniqueSlug = () => Math.random().toString(36).substring(2, 8);
 
-function normalizePhoneForWhatsApp(rawPhone?: string, countryCode?: string | null) {
+function normalizePhoneForWhatsApp(
+  rawPhone?: string,
+  countryCode?: string | null
+) {
   if (!rawPhone) return '';
 
   const cleanedCountry = (countryCode || '').toUpperCase();
@@ -17,13 +23,79 @@ function normalizePhoneForWhatsApp(rawPhone?: string, countryCode?: string | nul
       : undefined) || parsePhoneNumberFromString(rawPhone);
 
   if (!parsed || !parsed.isValid()) {
-    console.warn('Could not normalize phone number:', { rawPhone, countryCode });
+    console.warn('Could not normalize phone number:', {
+      rawPhone,
+      countryCode,
+    });
     return rawPhone.replace(/\D/g, '');
   }
 
   // Guarda formato internacional sin "+"
   // Ej: +17861234567 -> 17861234567
   return parsed.number.replace('+', '');
+}
+
+async function getShopifyProductType(productId?: number | null) {
+  if (!productId) return null;
+
+  const shop = process.env.SHOPIFY_STORE_DOMAIN;
+  const token = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+
+  if (!shop || !token) {
+    console.warn(
+      'Missing SHOPIFY_STORE_DOMAIN or SHOPIFY_ADMIN_ACCESS_TOKEN'
+    );
+    return null;
+  }
+
+  const query = `
+    query ProductType($id: ID!) {
+      product(id: $id) {
+        productType
+        title
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(
+      `https://${shop}/admin/api/2026-04/graphql.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': token,
+        },
+        body: JSON.stringify({
+          query,
+          variables: {
+            id: `gid://shopify/Product/${productId}`,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        'Shopify product lookup failed:',
+        response.status,
+        await response.text()
+      );
+      return null;
+    }
+
+    const json = await response.json();
+
+    if (json?.errors) {
+      console.error('Shopify GraphQL errors:', json.errors);
+      return null;
+    }
+
+    return json?.data?.product?.productType ?? null;
+  } catch (error) {
+    console.error('Error fetching Shopify product type:', error);
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -33,7 +105,10 @@ export async function POST(request: Request) {
     const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
 
     if (!secret) {
-      return NextResponse.json({ error: 'Incomplete configuration' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Incomplete configuration' },
+        { status: 500 }
+      );
     }
 
     const hash = crypto
@@ -46,8 +121,8 @@ export async function POST(request: Request) {
     }
 
     const body = JSON.parse(rawBody);
-    const email = body.email || body.customer?.email;
 
+    const email = body.email || body.customer?.email;
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 400 });
     }
@@ -57,9 +132,17 @@ export async function POST(request: Request) {
     const billing = body.billing_address || {};
 
     const firstName =
-      customer.first_name || shipping.first_name || billing.first_name || '';
+      customer.first_name ||
+      shipping.first_name ||
+      billing.first_name ||
+      '';
+
     const lastName =
-      customer.last_name || shipping.last_name || billing.last_name || '';
+      customer.last_name ||
+      shipping.last_name ||
+      billing.last_name ||
+      '';
+
     const fullName = `${firstName} ${lastName}`.trim();
 
     const address = [
@@ -70,7 +153,9 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join(', ');
 
-    const rawPhone = customer.phone || shipping.phone || billing.phone || '';
+    const rawPhone =
+      customer.phone || shipping.phone || billing.phone || '';
+
     const countryCode =
       shipping.country_code ||
       billing.country_code ||
@@ -79,10 +164,29 @@ export async function POST(request: Request) {
 
     const whatsappPhone = normalizePhoneForWhatsApp(rawPhone, countryCode);
 
+    const firstLineItem = body.line_items?.[0] ?? null;
+
+    const productId =
+      typeof firstLineItem?.product_id === 'number'
+        ? firstLineItem.product_id
+        : null;
+
+    const variantId =
+      typeof firstLineItem?.variant_id === 'number'
+        ? firstLineItem.variant_id
+        : null;
+
+    const shopifyProductType = await getShopifyProductType(productId);
+
     console.log(`Processing order for: ${email} (${fullName})`, {
       rawPhone,
       countryCode,
       whatsappPhone,
+      productId,
+      variantId,
+      productTitle: firstLineItem?.title ?? null,
+      variantTitle: firstLineItem?.variant_title ?? null,
+      shopifyProductType,
     });
 
     let { data: owner, error: ownerLookupError } = await supabaseAdmin
@@ -139,7 +243,9 @@ export async function POST(request: Request) {
           .eq('id', owner.id);
 
         if (updateOwnerError) {
-          throw new Error('Error updating owner: ' + updateOwnerError.message);
+          throw new Error(
+            'Error updating owner: ' + updateOwnerError.message
+          );
         }
       }
     }
@@ -157,6 +263,13 @@ export async function POST(request: Request) {
           owner_id: owner.id,
           slug,
           pet_name: 'New Pet',
+
+          // Shopify product metadata
+          shopify_product_id: productId,
+          shopify_variant_id: variantId,
+          shopify_product_title: firstLineItem?.title ?? null,
+          shopify_variant_title: firstLineItem?.variant_title ?? null,
+          shopify_product_type: shopifyProductType,
         },
       ])
       .select()
@@ -172,7 +285,6 @@ export async function POST(request: Request) {
 
     const publicUrl = `${qrBaseUrl}/${slug}`;
     const qrBuffer = await QRCode.toBuffer(publicUrl);
-
     const fileName = `Order_QR_${slug}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
@@ -202,6 +314,9 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error('Error in process:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

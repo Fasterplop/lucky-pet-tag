@@ -132,7 +132,7 @@ Overview: Tarjetas de estadísticas (Total, Impresas, Pendientes) y feed de "Act
 
 Printing:
 
-Motor de Paginación manual (6 ítems por página).
+Motor de Paginación manual (7 ítems por página).
 
 Búsqueda global por nombre de mascota, email, slug o nombre del dueño.
 

@@ -32,15 +32,15 @@ export default function RootLayout({
         </style>
       </head>
       {/* 1. Añadimos clases al body para manejar el flujo vertical */}
-      <body suppressHydrationWarning={true} className="flex flex-col min-h-screen">
+      <body suppressHydrationWarning={true} className="min-h-screen flex flex-col">
 
         {/* 2. Nueva cabecera pequeña para el traductor */}
-        <header className="w-full bg-white/80 backdrop-blur-md border-b border-[#bec9c0]/10 py-1.5 px-6 flex justify-end items-center sticky top-0 z-[100]">
+        <header className="full bg-white border-b border-[#bec9c0]/10 py-2 px-6 flex justify-end items-center sticky top-0 z-[100]">
           <div id="google_translate_element" className="scale-90 origin-right"></div>
         </header>
         
         {/* 3. El contenido principal ahora fluye debajo del header */}
-        <main className="flex-grow">
+        <main className="flex-grow relative">
           {children}
         </main>
 

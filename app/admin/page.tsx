@@ -86,12 +86,19 @@ export default function AdminDashboard() {
   const [showOverwriteModal, setShowOverwriteModal] = useState(false);
   const [isOverwriting, setIsOverwriting] = useState(false);
 
-  const refreshData = async () => {
-    const { data: petsData } = await supabase.from('pets').select(`*, owners (*)`).order('id', { ascending: false });
-    const { data: adminsData } = await supabase.from('admin_users').select('*');
-    if (petsData) setPets(petsData);
-    if (adminsData) setAdmins(adminsData);
-  };
+ const refreshData = async () => {
+  const { data: petsData } = await supabase
+    .from('pets')
+    .select(`*, owners (*)`)
+    .order('created_at', { ascending: false });
+
+  const { data: adminsData } = await supabase
+    .from('admin_users')
+    .select('*');
+
+  if (petsData) setPets(petsData);
+  if (adminsData) setAdmins(adminsData);
+};
 
  useEffect(() => {
   async function initAdmin() {
@@ -323,19 +330,42 @@ const publicUrl = `${qrBaseUrl}/${slug}`;
     window.location.replace('https://app.luckypetag.com/login');
   };
 
-  const filteredPets = pets.filter((p: any) => {
+  const filteredPets = [...pets]
+  .filter((p: any) => {
     const term = searchTerm.toLowerCase();
+
+    const productLabel = [
+      p.shopify_product_type || '',
+      p.shopify_product_title || '',
+      p.shopify_variant_title || '',
+    ]
+      .join(' ')
+      .toLowerCase();
+
     const nameMatch = (p.pet_name || '').toLowerCase().includes(term);
     const emailMatch = (p.owners?.email || '').toLowerCase().includes(term);
     const slugMatch = (p.slug || '').toLowerCase().includes(term);
     const ownerNameMatch = (p.owners?.full_name || '').toLowerCase().includes(term);
-    const matchesSearch = nameMatch || emailMatch || slugMatch || ownerNameMatch;
+    const productMatch = productLabel.includes(term);
+
+    const matchesSearch =
+      nameMatch || emailMatch || slugMatch || ownerNameMatch || productMatch;
 
     let matchesFilter = true;
     if (printFilter === 'ready') matchesFilter = p.is_printed === true;
     if (printFilter === 'pending') matchesFilter = p.is_printed !== true;
 
     return matchesSearch && matchesFilter;
+  })
+  .sort((a: any, b: any) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+    if (printFilter === 'pending') {
+      return aTime - bTime; // viejos -> nuevos
+    }
+
+    return bTime - aTime; // all y ready: nuevos -> viejos
   });
 
   if (loading) {
@@ -611,6 +641,19 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
     return new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
   };
 
+  const getProductLabel = (p: any) => {
+  if (p.shopify_product_type?.trim()) return p.shopify_product_type.trim();
+
+  const titleParts = [
+    p.shopify_product_title?.trim(),
+    p.shopify_variant_title?.trim(),
+  ].filter(Boolean);
+
+  if (titleParts.length > 0) return titleParts.join(' / ');
+
+  return 'Unknown product';
+};
+
   const renderPagination = () => {
     if (totalItems <= itemsPerPage) return null;
     return (
@@ -677,6 +720,7 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
             <div className="text-xs text-[#3f4942] space-y-1 bg-[#f2fbf6] p-3 rounded-xl">
               <p className="truncate"><span className="font-bold text-[9px] uppercase text-[#6f7a72] mr-1">Owner:</span> {p.owners?.full_name || 'Unnamed'} ({p.owners?.email})</p>
               <p><span className="font-bold text-[9px] uppercase text-[#6f7a72] mr-1">Purchased:</span> {formatDate(p.created_at)}</p>
+              <p><span className="font-bold text-[9px] uppercase text-[#6f7a72] mr-1">Product:</span> {getProductLabel(p)}</p>
               {p.is_printed && <p><span className="font-bold text-[9px] uppercase text-[#6f7a72] mr-1">Printed:</span> <span className="text-[#0b6946] font-bold">{formatDate(p.printed_at)}</span></p>}
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -730,6 +774,9 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
                 <td className="px-6 py-5 text-[#3f4942] min-w-0">
                   <p className="font-bold truncate">{p.owners?.full_name || 'Unnamed'}</p>
                   <p className="text-[11px] text-[#6f7a72] truncate">{p.owners?.email}</p>
+                <p className="text-[11px] text-[#6f7a72] mt-1">
+  Product: <span className="text-[#151d1b] font-medium">{getProductLabel(p)}</span>
+</p>
                 </td>
                 <td className="px-6 py-5 leading-tight">
                   <p className="text-[10px] text-[#6f7a72]">Purchased: <span className="text-[#151d1b] font-medium">{formatDate(p.created_at)}</span></p>
