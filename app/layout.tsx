@@ -31,12 +31,18 @@ export default function RootLayout({
           `}
         </style>
       </head>
-      {/* Añadimos suppressHydrationWarning aquí para calmar a React */}
-      <body suppressHydrationWarning={true}>
+      {/* 1. Añadimos clases al body para manejar el flujo vertical */}
+      <body suppressHydrationWarning={true} className="flex flex-col min-h-screen">
 
-        <div id="google_translate_element" className="fixed top-4 right-4 z-50"></div>
+        {/* 2. Nueva cabecera pequeña para el traductor */}
+        <header className="w-full bg-white/80 backdrop-blur-md border-b border-[#bec9c0]/10 py-1.5 px-6 flex justify-end items-center sticky top-0 z-[100]">
+          <div id="google_translate_element" className="scale-90 origin-right"></div>
+        </header>
         
-        {children}
+        {/* 3. El contenido principal ahora fluye debajo del header */}
+        <main className="flex-grow">
+          {children}
+        </main>
 
         {/* Scripts de inicialización y carga de Google Translate */}
         <Script
@@ -47,6 +53,7 @@ export default function RootLayout({
               function googleTranslateElementInit() {
                 new window.google.translate.TranslateElement({
                   pageLanguage: 'en',
+                  includedLanguages: 'es,fr,de',
                   autoDisplay: false
                 }, 'google_translate_element');
               }
