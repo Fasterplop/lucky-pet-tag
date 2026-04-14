@@ -131,6 +131,7 @@ export default function OwnerPortalPage() {
     ).replace(/\/$/, '');
   }, []);
 
+
   const ownerDisplayName =
   owner?.full_name?.trim().split(/\s+/)[0] ||
   owner?.email?.split('@')[0] ||
@@ -160,6 +161,23 @@ export default function OwnerPortalPage() {
   if (loading) return;
   if (pets.length === 0) return;
   if (editingPetId) return;
+
+  useEffect(() => {
+  if (loading) return;
+
+  const shouldScroll = sessionStorage.getItem('scrollToYourPets') === '1';
+  if (!shouldScroll) return;
+
+  const timer = window.setTimeout(() => {
+    yourPetsRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+    sessionStorage.removeItem('scrollToYourPets');
+  }, 150);
+
+  return () => window.clearTimeout(timer);
+}, [loading, pets.length]);
 
   const latestPet = pets[0]; // porque created_at está DESC
   setEditingPetId(latestPet.id);
@@ -619,7 +637,7 @@ export default function OwnerPortalPage() {
         </div>
       </section>
 
-      <section className={styles.shell} ref={yourPetsRef}>
+      <section id="your-pets" className={styles.shell} ref={yourPetsRef}>
         <div className={styles.sectionIntro}>
 
           <p className={styles.eyebrow}>Your Pets</p>
