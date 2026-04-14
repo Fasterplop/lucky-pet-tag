@@ -1,2 +1,68 @@
 @import "tailwindcss";
 
+/* 1. Ocultar la barra superior obligatoria y evitar que empuje el body */
+.skiptranslate > iframe.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+}
+body { top: 0px !important; }
+
+/* 2. Destruir TODO rastro del logo, enlaces y texto de Google */
+.goog-te-gadget {
+  font-size: 0px !important;
+  color: transparent !important;
+}
+.goog-te-gadget > span, 
+.goog-te-gadget .goog-logo-link,
+.goog-te-gadget img {
+  display: none !important;
+}
+.goog-te-gadget .goog-te-combo-margin {
+  margin: 0 !important;
+}
+
+/* 3. Estilizar la caja selectora con un Chevron (Flecha) Personalizado */
+.goog-te-combo {
+  /* Resetear el estilo nativo feo del navegador */
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  
+  /* Inyectar un Chevron SVG limpio, moderno y de color oscuro (#151d1b) */
+  background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23151d1b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important; /* Posición de la flecha */
+  background-size: 14px !important; /* Tamaño de la flecha */
+
+  /* Estilos de la caja */
+  color: #151d1b !important;
+  background-color: #ffffff !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 36px 8px 16px !important; /* padding-right 36px para dar espacio a la flecha */
+  border-radius: 9999px !important; /* Estilo pill */
+  border: 1px solid rgba(190, 201, 192, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  margin: 0 !important;
+}
+
+/* Efecto hover con el verde de Lucky Pet Tag */
+.goog-te-combo:hover {
+  border-color: #4D9E76 !important;
+  background-color: #f2fbf6 !important;
+}
+.goog-te-combo:focus {
+  border-color: #4D9E76 !important;
+  box-shadow: 0 0 0 3px rgba(77, 158, 118, 0.1) !important;
+}
+
+/* 4. Eliminar el hover amarillo que Google le pone al texto traducido */
+font { background-color: transparent !important; }
+font:hover {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
