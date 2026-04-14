@@ -22,7 +22,8 @@ import {
   PawPrint, 
   QrCode, 
   ExternalLink, 
-  Info 
+  Info,
+  Download
 } from 'lucide-react';
 
 type View = 'overview' | 'printing' | 'teams' | 'edit' | 'create';
@@ -87,7 +88,7 @@ export default function AdminDashboard() {
   const [isOverwriting, setIsOverwriting] = useState(false);
 
  const refreshData = async () => {
-  const { data: petsData, error: petsError } = await supabase
+  const { data: petsData } = await supabase
     .from('pets')
     .select(`*, owners (*)`)
     .order('created_at', { ascending: false });
@@ -96,21 +97,11 @@ export default function AdminDashboard() {
     .from('admin_users')
     .select('*');
 
-  if (petsError) {
-    console.error('Error loading pets in admin:', petsError.message);
-  }
-
-  if (petsData) {
-    console.log('Pets loaded in admin:', petsData.length, petsData);
-    setPets(petsData);
-  }
-
+  if (petsData) setPets(petsData);
   if (adminsData) setAdmins(adminsData);
 };
 
  useEffect(() => {
-  let intervalId: ReturnType<typeof setInterval> | null = null;
-
   async function initAdmin() {
     const {
       data: { session },
@@ -134,7 +125,10 @@ export default function AdminDashboard() {
     }
 
     if (!admin) {
+      // 1. Limpiamos la sesión "fantasma" en el subdominio admin
       await supabase.auth.signOut();
+      
+      // 2. Redirigimos a app o al login
       window.location.replace('https://app.luckypetag.com/login');
       return;
     }
@@ -142,18 +136,11 @@ export default function AdminDashboard() {
     setAdminData(admin);
     await refreshData();
     setLoading(false);
-
-    intervalId = setInterval(() => {
-      refreshData();
-    }, 10000); // cada 10 segundos
   }
 
   initAdmin();
-
-  return () => {
-    if (intervalId) clearInterval(intervalId);
-  };
 }, []);
+
   const requestDeletePet = (id: string, name: string) => {
     setModalConfig({ isOpen: true, type: 'pet', id, title: `the pet "${name}"` });
   };
@@ -349,7 +336,6 @@ const publicUrl = `${qrBaseUrl}/${slug}`;
     const term = searchTerm.toLowerCase();
 
     const productLabel = [
-      p.shopify_product_type || '',
       p.shopify_product_title || '',
       p.shopify_variant_title || '',
     ]
@@ -532,7 +518,7 @@ const publicUrl = `${qrBaseUrl}/${slug}`;
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#151d1b]/60 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl border border-[#ffdad6]">
             <div className="w-16 h-16 bg-[#ffdad6] rounded-full flex items-center justify-center text-[#ba1a1a] mb-6 mx-auto">
-              <span className="material-symbols-outlined text-3xl">contact_mail</span>
+              <MailWarning className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-headline font-bold text-center mb-2">Email Already Exists!</h2>
             <p className="text-[#6f7a72] text-center text-sm mb-6">
@@ -656,15 +642,8 @@ function PrintingTable({ pets, onEdit, onToggle, onDelete }: any) {
   };
 
   const getProductLabel = (p: any) => {
-  if (p.shopify_product_type?.trim()) return p.shopify_product_type.trim();
-
-  const titleParts = [
-    p.shopify_product_title?.trim(),
-    p.shopify_variant_title?.trim(),
-  ].filter(Boolean);
-
-  if (titleParts.length > 0) return titleParts.join(' / ');
-
+  if (p.shopify_product_title?.trim()) return p.shopify_product_title.trim();
+  if (p.shopify_variant_title?.trim()) return p.shopify_variant_title.trim();
   return 'Unknown product';
 };
 
@@ -898,7 +877,7 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
             onClick={onBack} 
             className="w-10 h-10 flex items-center justify-center bg-[#e7f0eb] text-[#151d1b] rounded-full hover:bg-[#dce5e0] transition-colors cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <h2 className="text-xl md:text-2xl font-headline font-bold truncate">Edit: {pet.pet_name}</h2>
         </div>
@@ -949,13 +928,19 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                 {pet.pet_photo_url ? (
   <div className="flex flex-col items-center gap-1">
     <img src={pet.pet_photo_url} alt="Pet" className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
-    <a href={`${pet.pet_photo_url}?download=`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer">
-       <span className="material-symbols-outlined text-[12px]">download</span> Download
-    </a>
+    <a
+  href={pet.pet_photo_url}
+  target="_blank"
+  rel="noreferrer"
+  className="text-[10px] font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer"
+>
+  <Download className="w-3 h-3" />
+  Download
+</a>
   </div>
 ) : (
                   <div className="w-12 h-12 rounded-full bg-[#dce5e0] flex items-center justify-center text-[#6f7a72]">
-                    <span className="material-symbols-outlined">pets</span>
+                    <PawPrint className="w-5 h-5" />
                   </div>
                 )}
                 <input 
@@ -984,15 +969,15 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                   <label className="block text-[10px] font-bold uppercase text-[#6f7a72] mb-1 ml-1">Public Profile Link</label>
 
                   
-                  <a 
-                    href={publicUrl} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="text-sm font-bold text-[#0b6946] hover:underline flex items-center gap-2 truncate"
-                  >
-                    {publicUrl}
-                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                  </a>
+                  <a
+  href={publicUrl}
+  target="_blank"
+  rel="noreferrer"
+  className="text-sm font-bold text-[#0b6946] hover:underline flex items-center gap-2 min-w-0"
+>
+  <span className="truncate">{publicUrl}</span>
+  <ExternalLink className="w-4 h-4 shrink-0" />
+</a>
                </div>
 
                <label className="flex items-center gap-3 cursor-pointer w-max">
@@ -1013,13 +998,21 @@ function EditView({ pet, onBack, onDeleteOwner, onDeletePet, onSave }: any) {
                   {pet.qr_code_url ? (
                     <img src={pet.qr_code_url} alt="QR" className="w-full h-full object-contain" />
                   ) : (
-                    <span className="material-symbols-outlined w-full h-full flex items-center justify-center text-[#6f7a72]">qr_code</span>
+                    <div className="w-full h-full flex items-center justify-center text-[#6f7a72]">
+  <QrCode className="w-6 h-6" />
+</div>
                   )}
                 </div>
                 {pet.qr_code_url && (
-                  <a href={pet.qr_code_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer">
-                    View original file <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                  </a>
+                  <a
+  href={pet.qr_code_url}
+  target="_blank"
+  rel="noreferrer"
+  className="text-xs font-bold text-[#0b6946] hover:underline flex items-center gap-1 cursor-pointer"
+>
+  View original file
+  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+</a>
                 )}
               </div>
             </div>
