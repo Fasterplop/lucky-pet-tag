@@ -9,7 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   
   // Flow Controls
-  const [isLogin, setIsLogin] = useState(true); 
+  const [isLogin, setIsLogin] = useState(false); 
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   

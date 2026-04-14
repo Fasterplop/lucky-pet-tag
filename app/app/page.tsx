@@ -130,7 +130,9 @@ export default function OwnerPortalPage() {
   }, []);
 
   const ownerDisplayName =
-    owner?.full_name?.trim() || owner?.email?.split('@')[0] || 'Owner';
+  owner?.full_name?.trim().split(/\s+/)[0] ||
+  owner?.email?.split('@')[0] ||
+  'Owner';
 
   useEffect(() => {
     void loadPortal();
@@ -548,9 +550,9 @@ export default function OwnerPortalPage() {
                 <span>Pet Gallery</span>
               </div>
 
-              <h2 className={styles.heroTitle}>
+              {/* <h2 className={styles.heroTitle}>
                 A warmer place for the pets you love most.
-              </h2>
+              </h2> */}
 
               <p className={styles.heroText}>
                 Keep each profile complete, beautiful, and ready to help your
@@ -594,7 +596,7 @@ export default function OwnerPortalPage() {
       <section className={styles.shell}>
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Your Pets</p>
-          <h2 className={styles.sectionTitle}>Pet gallery</h2>
+          {/* <h2 className={styles.sectionTitle}>Pet gallery</h2> */}
           <p className={styles.sectionText}>
             Every profile here helps tell your pet’s story. Update details, open
             the public profile, or turn on Lost Mode when your companion needs
@@ -790,15 +792,12 @@ export default function OwnerPortalPage() {
                             ) : null}
                           </div>
 
-                          <p style={{ 
-  fontSize: '0.75rem', 
-  color: 'var(--text-secondary, #666)', 
-  marginTop: '0.75rem', 
-  textAlign: 'center',
-  lineHeight: '1.4'
-}}>
-  <strong>Note:</strong> This photo becomes your pet’s identity. Make sure the face is fully visible and centered within the circle. A front-facing image works best. If the face isn’t clear or complete, please choose another photo. High-quality images ensure a sharper, more precise engraving.
-</p>
+                          <p className={styles.photoEditorNote}>
+  <strong>Note:</strong> This photo becomes your pet’s identity. Make sure the
+  face is fully visible and centered within the circle. A front-facing image
+  works best. If the face isn’t clear or complete, please choose another photo.
+  High-quality images ensure a sharper, more precise engraving.
+                          </p>
 
                         </div>
 
@@ -915,9 +914,9 @@ export default function OwnerPortalPage() {
       <section id="owner-profile" className={styles.shell}>
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Owner Profile</p>
-          <h2 className={styles.sectionTitle}>
+          {/* <h2 className={styles.sectionTitle}>
             Keep your contact details close to home.
-          </h2>
+          </h2> */}
           <p className={styles.sectionText}>
             Make sure your information is accurate so your pet’s profile can
             help the right person reach you quickly when needed.
