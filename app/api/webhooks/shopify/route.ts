@@ -11,18 +11,21 @@ function normalizePhoneForWhatsApp(rawPhone?: string, countryCode?: string | nul
 
   const cleanedCountry = (countryCode || '').toUpperCase();
 
-  const parsed =
-    (cleanedCountry
-      ? parsePhoneNumberFromString(rawPhone, cleanedCountry as CountryCode)
-      : undefined) || parsePhoneNumberFromString(rawPhone);
-
-  if (!parsed || !parsed.isValid()) {
-    console.warn('Could not normalize phone number:', { rawPhone, countryCode });
+  let parsed;
+  try {
+    parsed =
+      (cleanedCountry
+        ? parsePhoneNumberFromString(rawPhone, cleanedCountry as CountryCode)
+        : undefined) || parsePhoneNumberFromString(rawPhone);
+  } catch (error) {
+    console.error('Phone parse error:', error);
     return rawPhone.replace(/\D/g, '');
   }
 
-  // Guarda formato internacional sin "+"
-  // Ej: +17861234567 -> 17861234567
+  if (!parsed || !parsed.isValid()) {
+    return rawPhone.replace(/\D/g, '');
+  }
+
   return parsed.number.replace('+', '');
 }
 
@@ -79,23 +82,29 @@ export async function POST(request: Request) {
 
     const whatsappPhone = normalizePhoneForWhatsApp(rawPhone, countryCode);
 
-    console.log(`Processing order for: ${email} (${fullName})`, {
+    console.log('Processing order:', {
+      email,
+      fullName,
+      address,
       rawPhone,
       countryCode,
       whatsappPhone,
     });
 
-    let { data: owner, error: ownerLookupError } = await supabaseAdmin
+    const { data: owner, error: ownerLookupError } = await supabaseAdmin
       .from('owners')
-      .select('id, phone_number, has_whatsapp')
+      .select('id')
       .eq('email', email)
       .maybeSingle();
 
     if (ownerLookupError) {
+      console.error('Error finding owner:', ownerLookupError);
       throw new Error('Error finding owner: ' + ownerLookupError.message);
     }
 
-    if (!owner) {
+    let finalOwner = owner;
+
+    if (!finalOwner) {
       const { data: newOwner, error: ownerError } = await supabaseAdmin
         .from('owners')
         .insert([
@@ -104,47 +113,42 @@ export async function POST(request: Request) {
             full_name: fullName,
             address,
             phone_number: whatsappPhone || null,
-            has_whatsapp: Boolean(whatsappPhone),
           },
         ])
         .select()
         .single();
 
       if (ownerError) {
+        console.error('Error creating owner:', ownerError);
         throw new Error('Error creating owner: ' + ownerError.message);
       }
 
-      owner = newOwner;
+      finalOwner = newOwner;
     } else {
       const updatePayload: {
         full_name?: string;
         address?: string;
         phone_number?: string | null;
-        has_whatsapp?: boolean;
       } = {};
 
       if (fullName) updatePayload.full_name = fullName;
       if (address) updatePayload.address = address;
-
-      // Solo actualiza teléfono si Shopify realmente mandó uno
-      if (whatsappPhone) {
-        updatePayload.phone_number = whatsappPhone;
-        updatePayload.has_whatsapp = true;
-      }
+      if (whatsappPhone) updatePayload.phone_number = whatsappPhone;
 
       if (Object.keys(updatePayload).length > 0) {
         const { error: updateOwnerError } = await supabaseAdmin
           .from('owners')
           .update(updatePayload)
-          .eq('id', owner.id);
+          .eq('id', finalOwner.id);
 
         if (updateOwnerError) {
+          console.error('Error updating owner:', updateOwnerError);
           throw new Error('Error updating owner: ' + updateOwnerError.message);
         }
       }
     }
 
-    if (!owner) {
+    if (!finalOwner) {
       throw new Error('Could not establish owner');
     }
 
@@ -154,7 +158,7 @@ export async function POST(request: Request) {
       .from('pets')
       .insert([
         {
-          owner_id: owner.id,
+          owner_id: finalOwner.id,
           slug,
           pet_name: 'New Pet',
         },
@@ -163,6 +167,7 @@ export async function POST(request: Request) {
       .single();
 
     if (petError) {
+      console.error('Error creating pet profile:', petError);
       throw new Error('Error creating pet profile: ' + petError.message);
     }
 
@@ -182,6 +187,7 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
+      console.error('Error uploading QR:', uploadError);
       throw new Error('Error uploading QR to Supabase');
     }
 
@@ -189,17 +195,19 @@ export async function POST(request: Request) {
       .from('lucky-pet-assets')
       .getPublicUrl(fileName);
 
-    await supabaseAdmin
+    const { error: petUpdateError } = await supabaseAdmin
       .from('pets')
       .update({ qr_code_url: urlData.publicUrl })
       .eq('id', pet.id);
 
+    if (petUpdateError) {
+      console.error('Error updating pet QR:', petUpdateError);
+      throw new Error('Error updating pet QR: ' + petUpdateError.message);
+    }
+
     console.log(`Success! Tag created for ${email} with slug ${slug}`);
 
-    return NextResponse.json(
-      { message: 'Tag processed successfully' },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: 'Tag processed successfully' }, { status: 200 });
   } catch (error) {
     console.error('Error in process:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
