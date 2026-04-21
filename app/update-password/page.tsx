@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
-  
+  const { t } = useTranslation();
   // Form Data
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,12 +36,12 @@ export default function UpdatePasswordPage() {
     setMessage('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.passMismatch'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError(t('auth.passMinLength'));
       return;
     }
 
@@ -53,14 +54,14 @@ export default function UpdatePasswordPage() {
 
       if (updateError) throw new Error(updateError.message);
       
-      setMessage('Password updated successfully! Redirecting to your dashboard...');
+      setMessage(t('updatePassword.success'));
       
       setTimeout(() => {
         window.location.replace('https://app.luckypetag.com/');
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || 'Error updating password.');
+      setError(err.message || t('updatePassword.errGeneric'));
     } finally {
       setLoading(false);
     }
@@ -119,10 +120,10 @@ export default function UpdatePasswordPage() {
                 </div>
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-[#151d1b] tracking-tight mb-3">
-                Set New Password
+                {t('updatePassword.setTitle')}
               </h1>
               <p className="text-[#3f4942]/80 font-medium text-sm">
-                Enter your new secure password below to regain access to your dashboard.
+                {t('updatePassword.setSubtitle')}
               </p>
             </div>
 
@@ -137,7 +138,7 @@ export default function UpdatePasswordPage() {
               {/* New Password */}
               <div className="space-y-2 text-left">
                 <label className="text-[11px] font-bold text-[#3f4942] tracking-wider uppercase ml-1 block cursor-pointer">
-                  New Password
+                 {t('updatePassword.newPassLabel')}
                 </label>
                 <div className="relative">
                   <input
@@ -161,7 +162,7 @@ export default function UpdatePasswordPage() {
               {/* Confirm New Password */}
               <div className="space-y-2 text-left">
                 <label className="text-[11px] font-bold text-[#3f4942] tracking-wider uppercase ml-1 block cursor-pointer">
-                  Confirm New Password
+                  {t('updatePassword.confirmPassLabel')}
                 </label>
                 <div className="relative">
                   <input
@@ -188,22 +189,24 @@ export default function UpdatePasswordPage() {
                 className="w-full py-5 px-6 rounded-full bg-[#151d1b] text-white font-bold text-base shadow-xl shadow-black/5 hover:bg-black transition-all active:scale-[0.98] flex justify-center items-center gap-3 disabled:opacity-70 mt-4 cursor-pointer"
               >
                 {loading ? (
-                  <><span className="w-2.5 h-2.5 bg-[#4D9E76] rounded-full shadow-[0_0_8px_#4D9E76] animate-pulse"></span>Processing...</>
-                ) : 'Update Password'}
+                  <><span className="w-2.5 h-2.5 bg-[#4D9E76] rounded-full shadow-[0_0_8px_#4D9E76] animate-pulse"></span>{t('auth.processing')}</>
+                ) : (
+    t('updatePassword.updateBtn')
+  )}
               </button>
             </form>
 
             {/* Footer Links */}
             <footer className="mt-12 text-center">
               <div className="flex items-center justify-center gap-6 text-[10px] font-bold text-[#bec9c0] uppercase tracking-widest">
-                <a href="https://luckypetag.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">Privacy Policy</a>
+                <a href="https://luckypetag.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">{t('auth.privacy')}</a>
                 <span className="w-1 h-1 rounded-full bg-[#bec9c0]/30"></span>
-                <a href="https://luckypetag.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">Terms of Service</a>
+                <a href="https://luckypetag.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">{t('auth.terms')}</a>
                 <span className="w-1 h-1 rounded-full bg-[#bec9c0]/30"></span>
-                <a href="https://luckypetag.com/help" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">Help Center</a>
+                <a href="https://luckypetag.com/help" target="_blank" rel="noopener noreferrer" className="hover:text-[#4D9E76] transition-colors cursor-pointer">{t('auth.help')}</a>
               </div>
               <p className="mt-4 text-[10px] font-medium text-[#bec9c0]/60 tracking-wide">
-                &copy; {new Date().getFullYear()} Lucky Pet Tag. All rights protected.
+                &copy; {new Date().getFullYear()} Lucky Pet Tag. {t('auth.rights')}
               </p>
             </footer>
 

@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
+import { I18nProvider } from "./I18nProvider";
 
 export const metadata: Metadata = {
   title: "Lucky Pet Tag - App",
   description: "Secure and Smart Pet Identification System",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({
@@ -31,40 +35,11 @@ export default function RootLayout({
           `}
         </style>
       </head>
-      {/* 1. Añadimos clases al body para manejar el flujo vertical */}
-      <body suppressHydrationWarning={true} className="min-h-screen flex flex-col">
+      <body suppressHydrationWarning={true}>
 
-        {/* 2. Nueva cabecera pequeña para el traductor */}
-        <header className="full bg-white border-b border-[#bec9c0]/10 py-2 px-6 flex justify-end items-center sticky top-0 z-[100]">
-          <div id="google_translate_element" className="scale-90 origin-right"></div>
-        </header>
-        
-        {/* 3. El contenido principal ahora fluye debajo del header */}
-        <main className="flex-grow relative">
+        <I18nProvider>
           {children}
-        </main>
-
-        {/* Scripts de inicialización y carga de Google Translate */}
-        <Script
-          id="google-translate-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                new window.google.translate.TranslateElement({
-                  pageLanguage: 'en',
-                  includedLanguages: 'es,en',
-                  autoDisplay: false
-                }, 'google_translate_element');
-              }
-            `,
-          }}
-        />
-        <Script
-          id="google-translate-script"
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-          strategy="afterInteractive"
-        />
+        </I18nProvider>
 
         {/* Tu script original restaurado */}
         <script>

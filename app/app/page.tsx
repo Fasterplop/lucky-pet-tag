@@ -17,6 +17,7 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import styles from './OwnerPortal.module.css';
 
@@ -99,6 +100,7 @@ function getStoragePathFromPublicUrl(url: string | null) {
 }
 
 export default function OwnerPortalPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [owner, setOwner] = useState<Owner | null>(null);
   const [ownerForm, setOwnerForm] = useState<OwnerFormState | null>(null);
@@ -282,19 +284,19 @@ export default function OwnerPortalPage() {
         )
       );
 
-      setBanner(
+     setBanner(
         nextValue
-          ? `${pet.pet_name || 'Your pet'} is now in Lost Mode.`
-          : `${pet.pet_name || 'Your pet'} is back in Safe Mode.`
+          ? t('dashboard.alerts.lostModeOnBanner', { name: pet.pet_name || t('dashboard.alerts.yourPet') })
+          : t('dashboard.alerts.lostModeOffBanner', { name: pet.pet_name || t('dashboard.alerts.yourPet') })
       );
       showToast(
         'success',
-        nextValue ? 'Lost Mode activated.' : 'Lost Mode deactivated.'
+        nextValue ? t('dashboard.alerts.lostModeOnToast') : t('dashboard.alerts.lostModeOffToast')
       );
     } catch (error) {
       showToast(
         'error',
-        error instanceof Error ? error.message : 'Could not update Lost Mode.'
+        error instanceof Error ? error.message : t('dashboard.alerts.lostModeError')
       );
     } finally {
       setBusyPetId(null);
@@ -307,12 +309,12 @@ export default function OwnerPortalPage() {
     const maxSizeBytes = 10 * 1024 * 1024;
 
     if (!file.type.startsWith('image/')) {
-      showToast('error', 'Only image files are allowed.');
+      showToast('error', t('dashboard.alerts.invalidImage'));
       return;
     }
 
     if (file.size > maxSizeBytes) {
-      showToast('error', 'Image must be 10 MB or smaller.');
+      showToast('error', t('dashboard.alerts.imageTooLarge'));
       return;
     }
 
@@ -370,12 +372,12 @@ export default function OwnerPortalPage() {
         current.map((item) => (item.id === pet.id ? (data as Pet) : item))
       );
 
-      setBanner('Pet photo updated successfully.');
-      showToast('success', 'Photo uploaded successfully.');
+      setBanner(t('dashboard.alerts.photoUpdateBanner'));
+      showToast('success', t('dashboard.alerts.photoUploadSuccess'));
     } catch (error) {
       showToast(
         'error',
-        error instanceof Error ? error.message : 'Could not upload pet photo.'
+        error instanceof Error ? error.message : t('dashboard.alerts.photoUploadError')
       );
     } finally {
       setUploadingPhotoPetId(null);
@@ -424,12 +426,12 @@ export default function OwnerPortalPage() {
         current.map((item) => (item.id === pet.id ? (data as Pet) : item))
       );
 
-      setBanner('Pet photo removed.');
-      showToast('success', 'Photo removed successfully.');
+      setBanner(t('dashboard.alerts.photoRemoveBanner'));
+      showToast('success', t('dashboard.alerts.photoRemoveSuccess'));
     } catch (error) {
       showToast(
         'error',
-        error instanceof Error ? error.message : 'Could not remove pet photo.'
+        error instanceof Error ? error.message : t('dashboard.alerts.photoRemoveError')
       );
     } finally {
       setDeletingPhotoPetId(null);
@@ -475,13 +477,13 @@ export default function OwnerPortalPage() {
         current.map((pet) => (pet.id === editingPetId ? (data as Pet) : pet))
       );
 
-      setBanner('Your pet profile has been updated.');
-      showToast('success', 'Pet profile updated.');
+      setBanner(t('dashboard.alerts.petSaveBanner'));
+      showToast('success', t('dashboard.alerts.petSaveSuccess'));
       cancelEditingPet();
     } catch (error) {
       showToast(
         'error',
-        error instanceof Error ? error.message : 'Could not save pet changes.'
+        error instanceof Error ? error.message : t('dashboard.alerts.petSaveError')
       );
     } finally {
       setSavingPet(false);
@@ -514,14 +516,14 @@ export default function OwnerPortalPage() {
       const updatedOwner = data as Owner;
       setOwner(updatedOwner);
       setOwnerForm(makeOwnerForm(updatedOwner));
-      setBanner('Your profile has been updated.');
-      showToast('success', 'Profile updated successfully.');
+      setBanner(t('dashboard.alerts.ownerSaveBanner'));
+      showToast('success', t('dashboard.alerts.ownerSaveSuccess'));
     } catch (error) {
       showToast(
         'error',
         error instanceof Error
           ? error.message
-          : 'Could not save owner settings.'
+          : t('dashboard.alerts.ownerSaveError')
       );
     } finally {
       setSavingOwner(false);
@@ -534,7 +536,7 @@ export default function OwnerPortalPage() {
         <div className={styles.loadingWrap}>
           <div className={styles.loadingPill}>
             <Loader2 className={styles.spinIcon} size={18} />
-            <span>Loading...</span>
+            <span>{t('dashboard.loading')}</span>
           </div>
         </div>
       </main>
@@ -546,8 +548,8 @@ export default function OwnerPortalPage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div>
-            <p className={styles.eyebrow}>Owner Portal</p>
-            <h1 className={styles.headerTitle}>Welcome, {ownerDisplayName}</h1>
+            <p className={styles.eyebrow}>{t('dashboard.eyebrow')}</p>
+            <h1 className={styles.headerTitle}>{t('dashboard.welcome', { name: ownerDisplayName })}</h1>
           </div>
 
           <button
@@ -556,7 +558,7 @@ export default function OwnerPortalPage() {
             className={styles.signOutButton}
           >
             <LogOut size={16} />
-            Sign out
+            {t('dashboard.nav.logout')}
           </button>
         </div>
       </header>
@@ -576,24 +578,21 @@ export default function OwnerPortalPage() {
             <div>
               <div className={styles.heroBadge}>
                 <Heart size={16} />
-                <span>Pet Gallery</span>
+                <span>{t('dashboard.hero.badge')}</span>
               </div>
 
               <p className={styles.heroText}>
-                Keep each profile complete, beautiful, and ready to help your
-                companion get back home faster when it matters most.
+                {t('dashboard.hero.description')}
               </p>
 
               <div className={styles.heroStats}>
                 <StatPill
                   icon={<Heart size={15} />}
-                  label={`${pets.length} pet${pets.length === 1 ? '' : 's'} in your gallery`}
+                  label={t(`dashboard.hero.petsCount_${pets.length === 1 ? 'one' : 'other'}`, { count: pets.length })}
                 />
                 <StatPill
                   icon={<ShieldAlert size={15} />}
-                  label={`${
-                    pets.filter((pet) => Boolean(pet.is_lost_mode_active)).length
-                  } in Lost Mode`}
+                  label={t('dashboard.hero.lostCount', { count: pets.filter((pet) => Boolean(pet.is_lost_mode_active)).length })}
                 />
               </div>
             </div>
@@ -601,7 +600,7 @@ export default function OwnerPortalPage() {
             <div className={styles.heroActions}>
               <a href="#owner-profile" className={styles.secondaryAction}>
                 <UserRound size={16} />
-                Edit My Profile
+               {t('dashboard.hero.editProfile')}
               </a>
 
               <a
@@ -611,7 +610,7 @@ export default function OwnerPortalPage() {
                 className={styles.primaryAction}
               >
                 <Plus size={16} />
-                Add New Pet
+                {t('dashboard.hero.addPet')}
               </a>
             </div>
           </div>
@@ -620,20 +619,17 @@ export default function OwnerPortalPage() {
 
       <section id="your-pets" className={styles.shell} ref={yourPetsRef}>
         <div className={styles.sectionIntro}>
-          <p className={styles.eyebrow}>Your Pets</p>
+          <p className={styles.eyebrow}>{t('dashboard.pets.eyebrow')}</p>
           <p className={styles.sectionText}>
-            Every profile here helps tell your pet’s story. Update details, open
-            the public profile, or turn on Lost Mode when your companion needs
-            more visibility.
+            {t('dashboard.pets.description')}
           </p>
         </div>
 
         {pets.length === 0 ? (
           <div className={styles.emptyCard}>
-            <h3 className={styles.emptyTitle}>Your gallery is waiting.</h3>
+            <h3 className={styles.emptyTitle}>{t('dashboard.empty.title')}</h3>
             <p className={styles.emptyText}>
-              Add your first pet and create a profile that helps them come home
-              safely.
+              {t('dashboard.empty.description')}
             </p>
             <a
               href="https://luckypetag.com/collections/all"
@@ -642,7 +638,7 @@ export default function OwnerPortalPage() {
               className={styles.primaryAction}
             >
               <Plus size={16} />
-              Add Your First Pet
+              {t('dashboard.empty.addFirstPetBtn')}
             </a>
           </div>
         ) : (
@@ -663,7 +659,7 @@ export default function OwnerPortalPage() {
                       />
                     ) : (
                       <div className={styles.petImageFallback}>
-                        No photo uploaded
+                     {t('dashboard.petCard.noPhoto')}
                       </div>
                     )}
 
@@ -678,7 +674,7 @@ export default function OwnerPortalPage() {
                       ) : (
                         <Shield size={14} />
                       )}
-                      <span>{lostMode ? 'Lost Mode' : 'Safe Mode'}</span>
+                      <span>{lostMode ? t('dashboard.petCard.lostMode') : t('dashboard.petCard.safeMode')}</span>
                     </div>
                   </div>
 
@@ -686,12 +682,12 @@ export default function OwnerPortalPage() {
                     <div className={styles.petTopRow}>
                       <div className={styles.petMainInfo}>
                         <h3 className={styles.petName}>
-                          {pet.pet_name || 'Unnamed pet'}
+                          {pet.pet_name || t('dashboard.petCard.unnamedPet')}
                         </h3>
                         <p className={styles.petMeta}>
                           {[pet.pet_type, pet.breed, pet.age]
                             .filter(Boolean)
-                            .join(' • ') || 'Pet details not completed yet'}
+                            .join(' • ') || t('dashboard.petCard.noDetails')}
                         </p>
                       </div>
 
@@ -712,7 +708,7 @@ export default function OwnerPortalPage() {
                         rel="noreferrer"
                         className={styles.profileLinkButton}
                       >
-                        <span>View public profile</span>
+                        <span>{t('dashboard.petCard.viewProfile')}</span>
                         <ExternalLink size={16} />
                       </a>
 
@@ -735,8 +731,8 @@ export default function OwnerPortalPage() {
                           )}
                           <span>
                             {lostMode
-                              ? 'Deactivate Lost Mode'
-                              : 'Activate Lost Mode'}
+                              ? t('dashboard.petCard.deactivateLostMode')
+                              : t('dashboard.petCard.activateLostMode')}
                           </span>
                         </span>
                       </button>
@@ -754,7 +750,7 @@ export default function OwnerPortalPage() {
                               />
                             ) : (
                               <div className={styles.photoEditorFallback}>
-                                No photo yet
+                                {t('dashboard.petCard.noPhotoYet')}
                               </div>
                             )}
                           </div>
@@ -767,12 +763,12 @@ export default function OwnerPortalPage() {
                                     className={styles.spinIcon}
                                     size={16}
                                   />
-                                  <span>Uploading...</span>
+                                  <span>{t('dashboard.petCard.uploading')}</span>
                                 </>
                               ) : (
                                 <>
                                   <ImagePlus size={16} />
-                                  <span>Change photo</span>
+                                 <span>{t('dashboard.petCard.changePhoto')}</span>
                                 </>
                               )}
 
@@ -803,12 +799,12 @@ export default function OwnerPortalPage() {
                                       className={styles.spinIcon}
                                       size={16}
                                     />
-                                    <span>Removing...</span>
+                                    <span>{t('dashboard.petCard.removing')}</span>
                                   </>
                                 ) : (
                                   <>
                                     <Trash2 size={16} />
-                                    <span>Remove photo</span>
+                                   <span>{t('dashboard.petCard.removePhoto')}</span>
                                   </>
                                 )}
                               </button>
@@ -816,20 +812,15 @@ export default function OwnerPortalPage() {
                           </div>
 
                           <p className={styles.photoEditorNote}>
-                            <strong>Note:</strong> This photo becomes your pet’s
-                            identity. Make sure the face is fully visible and
-                            centered within the circle. A front-facing image
-                            works best. If the face isn’t clear or complete,
-                            please choose another photo. High-quality images
-                            ensure a sharper, more precise engraving.
+                            <strong>{t('dashboard.petCard.photoNotePrefix')}</strong> {t('dashboard.petCard.photoNoteText')}
                           </p>
                         </div>
 
                         <div className={styles.formGrid}>
                           <InputField
-                            label="Pet name"
+                            label={t('dashboard.editor.petName')}
                             value={petForm.pet_name}
-                            placeholder="e.g. Bella"
+                            placeholder={t('dashboard.editor.petNamePlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current
@@ -839,9 +830,9 @@ export default function OwnerPortalPage() {
                             }
                           />
                           <InputField
-                            label="Pet type"
+                            label={t('dashboard.editor.petType')}
                             value={petForm.pet_type}
-                            placeholder="e.g. Dog"
+                            placeholder={t('dashboard.editor.petTypePlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current
@@ -851,9 +842,9 @@ export default function OwnerPortalPage() {
                             }
                           />
                           <InputField
-                            label="Breed"
+                            label={t('dashboard.editor.breed')}
                             value={petForm.breed}
-                            placeholder="e.g. Golden Retriever"
+                            placeholder={t('dashboard.editor.breedPlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current ? { ...current, breed: value } : current
@@ -861,9 +852,9 @@ export default function OwnerPortalPage() {
                             }
                           />
                           <InputField
-                            label="Age"
+                            label={t('dashboard.editor.age')}
                             value={petForm.age}
-                            placeholder="e.g. 3 years"
+                            placeholder={t('dashboard.editor.agePlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current ? { ...current, age: value } : current
@@ -874,9 +865,9 @@ export default function OwnerPortalPage() {
 
                         <div className={styles.formSpacing}>
                           <TextAreaField
-                            label="Description"
+                            label={t('dashboard.editor.description')}
                             value={petForm.pet_description}
-                            placeholder="e.g. Friendly, playful, and loves being around people."
+                            placeholder={t('dashboard.editor.descriptionPlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current
@@ -889,9 +880,9 @@ export default function OwnerPortalPage() {
 
                         <div className={styles.formSpacing}>
                           <TextAreaField
-                            label="Allergies / Medical notes"
+                            label={t('dashboard.editor.allergies')}
                             value={petForm.allergies}
-                            placeholder="e.g. Allergic to chicken. Takes medication every morning."
+                            placeholder={t('dashboard.editor.allergiesPlaceholder')}
                             onChange={(value) =>
                               setPetForm((current) =>
                                 current
@@ -914,7 +905,7 @@ export default function OwnerPortalPage() {
                             ) : (
                               <Save size={16} />
                             )}
-                            <span>Save changes</span>
+                            <span>{t('dashboard.editor.saveChanges')}</span>
                           </button>
 
                           <button
@@ -922,7 +913,7 @@ export default function OwnerPortalPage() {
                             onClick={cancelEditingPet}
                             className={styles.secondarySmallButton}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </div>
@@ -937,19 +928,18 @@ export default function OwnerPortalPage() {
 
       <section id="owner-profile" className={styles.shell}>
         <div className={styles.sectionIntro}>
-          <p className={styles.eyebrow}>Owner Profile</p>
+          <p className={styles.eyebrow}>{t('dashboard.owner.eyebrow')}</p>
           <p className={styles.sectionText}>
-            Make sure your information is accurate so your pet’s profile can
-            help the right person reach you quickly when needed.
+            {t('dashboard.owner.description')}
           </p>
         </div>
 
         <form onSubmit={saveOwnerSettings} className={styles.ownerCard}>
           <div className={styles.formGrid}>
             <InputField
-              label="Full name"
+              label={t('dashboard.owner.fullName')}
               value={ownerForm?.full_name || ''}
-              placeholder="e.g. Luis Martinez"
+              placeholder={t('dashboard.owner.fullNamePlaceholder')}
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, full_name: value } : current
@@ -958,10 +948,10 @@ export default function OwnerPortalPage() {
             />
 
             <InputField
-              label="Phone number *"
+              label={t('dashboard.owner.phone')}
               value={ownerForm?.phone_number || ''}
-              placeholder="e.g. (123) 456-7890"
-              hint="Used for WhatsApp messages and shared location."
+              placeholder={t('dashboard.owner.phonePlaceholder')}
+              hint={t('dashboard.owner.phoneHint')}
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, phone_number: value } : current
@@ -972,9 +962,9 @@ export default function OwnerPortalPage() {
 
           <div className={styles.formSpacing}>
             <InputField
-              label="Address"
+              label={t('dashboard.owner.address')}
               value={ownerForm?.address || ''}
-              placeholder="e.g. 1200 NW 6 Avenue, Miami, FL 33136"
+              placeholder={t('dashboard.owner.addressPlaceholder')}
               onChange={(value) =>
                 setOwnerForm((current) =>
                   current ? { ...current, address: value } : current
@@ -985,9 +975,9 @@ export default function OwnerPortalPage() {
 
           <div className={styles.formSpacing}>
             <InputField
-              label="Email"
+              label={t('dashboard.owner.email')}
               value={owner?.email || ''}
-              placeholder="e.g. name@email.com"
+              placeholder={t('dashboard.owner.emailPlaceholder')}
               onChange={() => {}}
               disabled
             />
@@ -1004,7 +994,7 @@ export default function OwnerPortalPage() {
               ) : (
                 <Save size={16} />
               )}
-              <span>Save my profile</span>
+              <span>{t('dashboard.owner.saveProfile')}</span>
             </button>
           </div>
         </form>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { LoaderCircle, MapPin, MessageCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import styles from './PublicProfile.module.css';
 
 type FinderContactPanelProps = {
@@ -13,34 +14,31 @@ export default function FinderContactPanel({
   petName,
   whatsappPhone,
 }: FinderContactPanelProps) {
+  const { t } = useTranslation();
   const [error, setError] = useState('');
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   function openWhatsappMessage() {
     if (!whatsappPhone) {
-      setError('WhatsApp contact is not available right now.');
+      setError(t('finderPanel.waNotAvailable'));
       return;
     }
 
     setError('');
 
-    const text = encodeURIComponent(
-  `Hi, I found ${petName}. I wanted to reach out right away in case this helps bring ${petName} back home safely.`
-);
+    const text = encodeURIComponent(t('finderPanel.waTemplateBasic', { petName }));
     window.location.href = `https://wa.me/${whatsappPhone}?text=${text}`;
   }
 
   function openWhatsappLocationFallback() {
-    const fallbackText = encodeURIComponent(
-      `Hi, I found ${petName}!. My phone couldn't get an automatic map link, please let me know when you see this!`
-    );
-
+    const fallbackText = encodeURIComponent(t('finderPanel.waTemplateFallback', { petName }));
     window.open(`https://wa.me/${whatsappPhone}?text=${fallbackText}`, '_blank');
   }
 
+
   function openWhatsappLocation() {
     if (!whatsappPhone) {
-      setError('WhatsApp contact is not available right now.');
+      setError(t('finderPanel.waNotAvailable'));
       return;
     }
 
@@ -55,12 +53,10 @@ export default function FinderContactPanel({
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const { latitude, longitude } = coords;
-
         const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        const appleMapsUrl = `https://maps.apple.com/?ll=${latitude},${longitude}`;
-
+        
         const text = encodeURIComponent(
-          `Hi, I found ${petName}. I wanted to share the exact location where I found him/her to help bring ${petName} back home safely. I hope this helps you reunite very soon. \n\nGoogle Maps: ${googleMapsUrl}`
+          t('finderPanel.waTemplateLocation', { petName, url: googleMapsUrl })
         );
 
         window.location.href = `https://wa.me/${whatsappPhone}?text=${text}`;
@@ -100,39 +96,26 @@ export default function FinderContactPanel({
   return (
     <div className={styles.actionCard}>
       <div className={styles.center}>
-        <h2 className={styles.actionTitle}>Help me get back to my family</h2>
-
-        <p className={styles.actionText}>
-          A quick WhatsApp message can help reunite this pet with the people who
-          love them.
-        </p>
+        <h2 className={styles.actionTitle}>{t('finderPanel.title')}</h2>
+        <p className={styles.actionText}>{t('finderPanel.description')}</p>
 
         <div className={styles.actionsStack}>
-          <button
-            type="button"
-            className={styles.secondaryButton}
-            onClick={openWhatsappMessage}
-          >
+          <button type="button" className={styles.secondaryButton} onClick={openWhatsappMessage}>
             <MessageCircle size={20} />
-            Message my family
+            {t('finderPanel.msgFamilyBtn')}
           </button>
 
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={openWhatsappLocation}
-            disabled={loadingLocation}
-          >
+          <button type="button" className={styles.primaryButton} onClick={openWhatsappLocation} disabled={loadingLocation}>
             {loadingLocation ? (
               <LoaderCircle size={18} className={styles.spinIcon} />
             ) : (
               <MapPin size={20} />
             )}
-            Send my location to my family
+            {t('finderPanel.sendLocationBtn')}
           </button>
         </div>
 
-        {error ? <p className={styles.error}>{error}</p> : null}
+        {error && <p className={styles.error}>{error}</p>}
       </div>
     </div>
   );
