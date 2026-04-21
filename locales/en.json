@@ -105,7 +105,7 @@
     "welcome": "Welcome, {{name}}",
     "hero": {
       "badge": "Pet Gallery",
-      "description": "Keep each profile complete, beautiful, and ready to help your companion get back home faster when it matters most.",
+      "description": "Keep each profile complete and ready to help your companion get back home faster when it matters most.",
       "petsCount_one": "{{count}} pet in your gallery",
       "petsCount_other": "{{count}} pets in your gallery",
       "lostCount": "{{count}} in Lost Mode",

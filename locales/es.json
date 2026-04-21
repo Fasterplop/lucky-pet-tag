@@ -105,7 +105,7 @@
     "welcome": "Bienvenido, {{name}}",
     "hero": {
       "badge": "Galería de Mascotas",
-      "description": "Mantén cada perfil completo, hermoso y listo para ayudar a tu compañero a volver a casa más rápido cuando más importa.",
+      "description": "Mantén cada perfil completo y listo para ayudar a tu compañero a volver a casa más rápido cuando más importa.",
       "petsCount_one": "{{count}} mascota en tu galería",
       "petsCount_other": "{{count}} mascotas en tu galería",
       "lostCount": "{{count}} en Modo Perdido",
