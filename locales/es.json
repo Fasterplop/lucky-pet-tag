@@ -91,9 +91,13 @@
     "errUpdate": "No se pudo actualizar la contraseña.",
     "errGeneric": "Algo salió mal.",
     "setTitle": "Establecer Nueva Contraseña",
-    "setSubtitle": "Ingresa tu nueva contraseña segura a continuación para recuperar el acceso a tu panel."
+    "setSubtitle": "Ingresa tu nueva contraseña segura a continuación para recuperar el acceso a tu panel.",
+    "checking": "Verificando tu sesión...",
+    "accountLabel": "Vas a cambiar la contraseña de",
+    "ambientWarning": "Esta es la sesión que ya estaba abierta en este navegador, no viene de un enlace de recuperación. Si no eres tú, cierra sesión antes de continuar.",
+    "notYou": "No soy yo — cerrar sesión"
   },
- "common": {
+  "common": {
     "cancel": "Cancelar"
   },
   "dashboard": {

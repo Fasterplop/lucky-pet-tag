@@ -19,16 +19,60 @@ export default function UpdatePasswordPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Sesión sobre la que se va a actuar
+  const [checking, setChecking] = useState(true);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [isRecovery, setIsRecovery] = useState(false);
+
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Opcional: Redirigir al login si el enlace expiró o no hay sesión válida
-        // router.push('/login');
-      }
+    let settled = false;
+
+    // El enlace de recuperación trae los tokens en la URL y Supabase los procesa
+    // de forma asíncrona, así que un solo getSession() no basta para decidir.
+    const urlHasTokens =
+      /access_token|type=recovery/.test(window.location.hash) ||
+      /[?&]code=/.test(window.location.search);
+
+    const adopt = (session: any, recovery: boolean) => {
+      if (settled) return;
+      settled = true;
+      setAccountEmail(session?.user?.email ?? null);
+      setIsRecovery(recovery);
+      setChecking(false);
     };
-    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) return;
+      if (event === 'PASSWORD_RECOVERY') adopt(session, true);
+      else if (!urlHasTokens) adopt(session, false);
+    });
+
+    (async () => {
+      if (!urlHasTokens) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) adopt(session, false);
+        else if (!settled) { settled = true; router.replace('/login'); }
+        return;
+      }
+
+      // Con tokens en la URL esperamos al evento antes de rendirnos.
+      setTimeout(async () => {
+        if (settled) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) adopt(session, true);
+        else { settled = true; router.replace('/login'); }
+      }, 4000);
+    })();
+
+    return () => subscription.unsubscribe();
   }, [router]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace('/login');
+  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +128,17 @@ export default function UpdatePasswordPage() {
     </svg>
   );
 
+  if (checking) {
+    return (
+      <div className="bg-[#f2fbf6] min-h-screen flex items-center justify-center font-sans text-[#151d1b]">
+        <div className="flex items-center gap-3 text-sm font-medium text-[#3f4942]/80">
+          <span className="w-2.5 h-2.5 bg-[#4D9E76] rounded-full shadow-[0_0_8px_#4D9E76] animate-pulse"></span>
+          {t('updatePassword.checking')}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#f2fbf6] min-h-screen flex flex-col overflow-x-hidden font-sans text-[#151d1b] selection:bg-[#a1f4c6] selection:text-[#002112]">
       
@@ -125,6 +180,31 @@ export default function UpdatePasswordPage() {
               <p className="text-[#3f4942]/80 font-medium text-sm">
                 {t('updatePassword.setSubtitle')}
               </p>
+            </div>
+
+            {/* Cuenta afectada: sin esto no se ve a quién se le cambia la contraseña */}
+            <div className="mb-6 space-y-3">
+              <div className="bg-[#edf6f1] border border-[#4D9E76]/20 p-4 rounded-2xl text-center">
+                <p className="text-[10px] font-bold text-[#3f4942]/70 tracking-wider uppercase mb-1">
+                  {t('updatePassword.accountLabel')}
+                </p>
+                <p className="text-sm font-bold text-[#151d1b] break-all">{accountEmail}</p>
+              </div>
+
+              {!isRecovery && (
+                <div className="bg-[#b9761a]/10 border border-[#b9761a]/25 p-4 rounded-2xl text-center">
+                  <p className="text-xs font-medium text-[#8a5713] mb-3">
+                    {t('updatePassword.ambientWarning')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="text-[11px] font-bold text-[#8a5713] underline underline-offset-4 hover:opacity-80 transition-opacity cursor-pointer"
+                  >
+                    {t('updatePassword.notYou')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Feedback Messages */}

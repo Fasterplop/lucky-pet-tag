@@ -91,7 +91,11 @@
     "errUpdate": "Could not update password.",
     "errGeneric": "Something went wrong.",
     "setTitle": "Set New Password",
-    "setSubtitle": "Enter your new secure password below to regain access to your dashboard."
+    "setSubtitle": "Enter your new secure password below to regain access to your dashboard.",
+    "checking": "Verifying your session...",
+    "accountLabel": "You are changing the password for",
+    "ambientWarning": "This is the session already open in this browser, not one from a recovery link. If this isn't you, sign out before continuing.",
+    "notYou": "Not me — sign out"
   },
   "common": {
     "cancel": "Cancel"
@@ -191,4 +195,3 @@
     }
   }
 }
-
